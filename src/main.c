@@ -1,185 +1,171 @@
 #include <midi.h>
 #include <guspat.h>
-#include <SDL.h>
 
-#include <math.h>
+#include "miniaudio.h"
+#include "stb_ds.h"
 
-static GUSPatSynth* gGUSPatSynth;
-static int	    gUseGUSPatSynth;
-
-#ifndef M_PI
-#define M_PI 3.14159265
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
 #endif
 
 #define BUFSZ 240
 
-#define VOICES 16
+typedef struct buffer buffer_t;
 
-typedef struct voice {
-	double freq;
-	double vel;
-	double x;
-} voice_t;
+struct buffer {
+	short buffer[BUFSZ * 2];
+	int   seek;
+};
 
-typedef struct channel {
-	voice_t voices[VOICES];
-} channel_t;
-channel_t channels[128] = {0};
+static GUSPatSynth* gGUSPatSynth;
+
+static ma_mutex	 gBufferMutex;
+static buffer_t* gBuffer = NULL;
 
 static void callback(MidiStream* ms, const MidiEvent* event) {
-	if(gUseGUSPatSynth) {
-		if(event->type == MidiEventNote) {
-			GUSPatSynth_Note(gGUSPatSynth, event->note.channel, event->note.key, event->note.velocity);
-		} else if(event->type == MidiEventProgramChange) {
-			GUSPatSynth_SetProgram(gGUSPatSynth, event->programChange.channel, event->programChange.program, event->programChange.channel == 9 ? 1 : 0);
-		}
-	} else {
-		if(event->type == MidiEventNote) {
-			channel_t* ch = &channels[event->note.channel];
-			int	   i;
-			double	   freq = 440 * pow(2, (double)(event->note.key - 69) / 12);
-
-			if(event->note.velocity == 0) {
-				for(i = 0; i < VOICES; i++) {
-					if(ch->voices[i].freq == freq) {
-						ch->voices[i].freq = 0;
-						ch->voices[i].vel  = 0;
-						ch->voices[i].x	   = 0;
-
-						break;
-					}
-				}
-			} else {
-				for(i = 0; i < VOICES && ch->voices[i].vel != 0; i++);
-
-				if(i < VOICES) {
-					ch->voices[i].freq = freq;
-					ch->voices[i].vel  = event->note.velocity / 127.0;
-					ch->voices[i].x	   = 0;
-				}
-			}
-		}
+	if(event->type == MidiEventNote) {
+		GUSPatSynth_Note(gGUSPatSynth, event->note.channel, event->note.key, event->note.velocity);
+	} else if(event->type == MidiEventProgramChange) {
+		GUSPatSynth_SetProgram(gGUSPatSynth, event->programChange.channel, event->programChange.program, event->programChange.channel == 9 ? 1 : 0);
 	}
 }
 
 static void render(short* out, int frames) {
-	if(gUseGUSPatSynth) {
-		GUSPatSynth_RenderShort(gGUSPatSynth, out, frames);
-	} else {
-		int i, j, k;
+	GUSPatSynth_RenderShort(gGUSPatSynth, out, frames);
+}
 
-		memset(out, 0, frames * 2 * 2);
+static int bufferSize(void) {
+	int i;
+	int r = 0;
 
-		for(j = 0; j < frames; j++) {
-			float n = 0;
+	ma_mutex_lock(&gBufferMutex);
+	for(i = 0; i < arrlen(gBuffer); i++) {
+		r += BUFSZ - gBuffer[i].seek;
+	}
+	ma_mutex_unlock(&gBufferMutex);
 
-			for(i = 0; i < 128; i++) {
-				for(k = 0; k < VOICES; k++) {
-					if(channels[i].voices[k].vel == 0) continue;
+	return r;
+}
 
-					n += sin(2 * M_PI * channels[i].voices[k].freq * channels[i].voices[k].x) * channels[i].voices[k].vel / (channels[i].voices[k].x * 4 + 1) / 4;
+static void dataCallback(ma_device* device, void* output, const void* input, ma_uint32 frames) {
+	short* out = output;
+	int    f   = 0;
 
-					channels[i].voices[k].x += 1.0 / 48000;
-				}
-			}
+	memset(out, 0, sizeof(*out) * frames * 2);
+	while(bufferSize() > 0 && (frames - f) > 0) {
+		int n = 0;
 
-			if(-1 > n) n = -1;
-			if(1 < n) n = 1;
+		ma_mutex_lock(&gBufferMutex);
+		n = (frames - f) > (BUFSZ - gBuffer[0].seek) ? (BUFSZ - gBuffer[0].seek) : (frames - f);
 
-			out[2 * j + 0] = out[2 * j + 1] = n * 4096;
-		}
+		memcpy(out + f * 2, gBuffer[0].buffer + gBuffer[0].seek * 2, sizeof(gBuffer[0].buffer[0]) * n * 2);
+
+		gBuffer[0].seek += n;
+		f += n;
+		if((BUFSZ - gBuffer[0].seek) <= 0) arrdel(gBuffer, 0);
+		ma_mutex_unlock(&gBufferMutex);
 	}
 }
 
 int main(int argc, char** argv) {
-	FileStream*	  fs;
-	MidiStream*	  ms;
-	SDL_AudioSpec	  spec;
-	SDL_AudioDeviceID dev;
+	FileStream*	 fs;
+	FileStream*	 cfgfs;
+	MidiStream*	 ms;
+	ma_device_config config;
+	ma_device	 device;
 
-	if(argc != 3 && argc != 2) {
-		fprintf(stderr, "Usage: %s [cfg] midi\n", argv[0]);
+	if(argc != 3) {
+		fprintf(stderr, "Usage: %s cfg midi\n", argv[0]);
 		return 1;
 	}
 
-	gUseGUSPatSynth = argc == 3 ? 1 : 0;
-
-	if(gUseGUSPatSynth) {
-		FileStream* cfgfs;
-
-		if((cfgfs = FileStream_New(argv[1])) == NULL) {
-			fprintf(stderr, "cannot open cfg\n");
-			return 1;
-		}
-
-		if((gGUSPatSynth = GUSPatSynth_New(cfgfs, 48000)) == NULL) {
-			FileStream_Destroy(cfgfs);
-
-			fprintf(stderr, "cannot open gus patches\n");
-			return 1;
-		}
-
-		FileStream_Destroy(cfgfs);
+	if((cfgfs = FileStream_New(argv[1])) == NULL) {
+		fprintf(stderr, "cannot open cfg\n");
+		return 1;
 	}
 
-	if((fs = FileStream_New(gUseGUSPatSynth ? argv[2] : argv[1])) == NULL) {
-		if(gUseGUSPatSynth) GUSPatSynth_Destroy(gGUSPatSynth);
+	if((gGUSPatSynth = GUSPatSynth_New(cfgfs, 48000)) == NULL) {
+		FileStream_Destroy(cfgfs);
+
+		fprintf(stderr, "cannot open gus patches\n");
+		return 1;
+	}
+
+	FileStream_Destroy(cfgfs);
+
+	if((fs = FileStream_New(argv[2])) == NULL) {
+		GUSPatSynth_Destroy(gGUSPatSynth);
 
 		fprintf(stderr, "cannot open midi\n");
 		return 1;
 	}
 
 	if((ms = MidiStream_New(fs, callback)) == NULL) {
-		if(gUseGUSPatSynth) GUSPatSynth_Destroy(gGUSPatSynth);
 		FileStream_Destroy(fs);
+		GUSPatSynth_Destroy(gGUSPatSynth);
 
 		fprintf(stderr, "cannot open midi\n");
 		return 1;
 	}
 
-	SDL_Init(SDL_INIT_AUDIO);
+	config			 = ma_device_config_init(ma_device_type_playback);
+	config.playback.format	 = ma_format_s16;
+	config.playback.channels = 2;
+	config.sampleRate	 = 48000;
+	config.dataCallback	 = dataCallback;
+	config.pUserData	 = NULL;
 
-	memset(&spec, 0, sizeof(spec));
-	spec.freq     = 48000;
-	spec.format   = AUDIO_S16;
-	spec.channels = 2;
-	spec.samples  = 2048;
-
-	if((dev = SDL_OpenAudioDevice(NULL, 0, &spec, NULL, 0)) == 0) {
-		if(gUseGUSPatSynth) GUSPatSynth_Destroy(gGUSPatSynth);
-		FileStream_Destroy(fs);
+	if(ma_device_init(NULL, &config, &device) != MA_SUCCESS) {
 		MidiStream_Destroy(ms);
+		FileStream_Destroy(fs);
+		GUSPatSynth_Destroy(gGUSPatSynth);
 
 		fprintf(stderr, "cannot open audio\n");
 		return 1;
 	}
 
-	SDL_PauseAudioDevice(dev, 0);
+	if(ma_device_start(&device) != MA_SUCCESS) {
+		ma_device_uninit(&device);
+		MidiStream_Destroy(ms);
+		FileStream_Destroy(fs);
+		GUSPatSynth_Destroy(gGUSPatSynth);
+
+		fprintf(stderr, "cannot open audio\n");
+		return 1;
+	}
+
+	ma_mutex_init(&gBufferMutex);
 
 	while(1) {
-		SDL_Event ev;
-		short	  buffer[BUFSZ * 2] = {0};
-		int	  i;
-
-		while(SDL_PollEvent(&ev)) {
-			if(ev.type == SDL_QUIT) goto quit;
-		}
+		buffer_t buffer = {0};
+		int	 i;
 
 		for(i = 0; i < ms->nTracks && ms->tracks[i].finished; i++);
 		if(i == ms->nTracks) break;
 
 		MidiStream_Advance(ms, (double)BUFSZ / 48000);
 
-		render(buffer, BUFSZ);
-		SDL_QueueAudio(dev, buffer, BUFSZ * 2 * 2);
+		render(buffer.buffer, BUFSZ);
 
-		if(SDL_GetQueuedAudioSize(dev) > 48000) SDL_Delay((double)BUFSZ / 48000 * 1000);
+		ma_mutex_lock(&gBufferMutex);
+		arrput(gBuffer, buffer);
+		ma_mutex_unlock(&gBufferMutex);
+
+		while(bufferSize() > 4800)
+#ifdef _WIN32
+			Sleep(1);
+#else
+			usleep(1000);
+#endif
 	}
 
 quit:;
-	if(gUseGUSPatSynth) GUSPatSynth_Destroy(gGUSPatSynth);
-	FileStream_Destroy(fs);
+	ma_device_uninit(&device);
 	MidiStream_Destroy(ms);
+	FileStream_Destroy(fs);
+	GUSPatSynth_Destroy(gGUSPatSynth);
 
 	return 0;
 }

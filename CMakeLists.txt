@@ -24,12 +24,13 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	target_compile_definitions(guspat PRIVATE DEBUG)
 endif()
 
-find_package(SDL2 REQUIRED)
-
 file(GLOB PMIDI_SOURCES src/*.c)
 add_executable(pmidi ${PMIDI_SOURCES})
-target_link_libraries(pmidi PRIVATE midi guspat SDL2::SDL2)
+target_link_libraries(pmidi PRIVATE midi guspat)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Windows")
 	target_link_libraries(pmidi PRIVATE m)
+endif()
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+	target_link_libraries(pmidi PRIVATE dl)
 endif()
