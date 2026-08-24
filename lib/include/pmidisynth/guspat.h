@@ -44,9 +44,9 @@ struct GUSProgram {
 struct GUSVoice {
 	int key;
 
-	GUSSample*   sample;
-	unsigned int volume; /* 16.16 */
-	int	     loop;
+	GUSSample* sample;
+	int	   volume; /* 15.16 */
+	int	   loop;
 
 	unsigned int x;	   /* 16.16 */
 	unsigned int step; /* 16.16 */

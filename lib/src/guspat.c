@@ -430,9 +430,9 @@ void GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int dru
 				int    x    = voice->x >> 16; \
 				short* wave = &sample->wave[x * 2]; \
 \
-				proc \
+				proc; \
 \
-				    voice->x += voice->step; \
+				voice->x += voice->step; \
 \
 				/* TODO: implement more than forward loop */ \
 				if(voice->loop && x >= sample->endLoop) { \
