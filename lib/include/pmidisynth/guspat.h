@@ -24,7 +24,7 @@ struct GUSSample {
 	unsigned int startLoop;
 	unsigned int endLoop;
 
-	float*	     wave;	  /* stereo interleaved @ self->rate Hz */
+	short*	     wave;	  /* stereo interleaved @ self->rate Hz */
 	unsigned int nWaveFrames; /* stereo frames */
 
 	int loop;	  /* loop or not */
@@ -44,8 +44,9 @@ struct GUSProgram {
 struct GUSVoice {
 	int key;
 
-	GUSSample* sample;
-	float	   volume;
+	GUSSample*   sample;
+	unsigned int volume; /* 16.16 */
+	int	     loop;
 
 	unsigned int x;	   /* 16.16 */
 	unsigned int step; /* 16.16 */
@@ -64,9 +65,6 @@ struct GUSPatSynth {
 
 	GUSProgram programs[128 * 2]; /* OR 0x80 to make it drum program */
 	GUSChannel channels[GUSPATSYNTH_CHANNELS];
-
-	float* tempBuffer;
-	int    nTempBuffer;
 };
 
 GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate);

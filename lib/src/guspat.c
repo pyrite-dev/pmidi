@@ -268,8 +268,8 @@ static void loadSample(GUSSample* sample, FileStream* fs, int patchChannels, int
 			break;
 		}
 
-		sample->wave[i * 2 + 0] = fl;
-		sample->wave[i * 2 + 1] = fr;
+		sample->wave[i * 2 + 0] = fl * 32767;
+		sample->wave[i * 2 + 1] = fr * 32767;
 	}
 
 	free(wave);
@@ -387,7 +387,7 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 			voice->sample = NULL;
 			voice->x      = 0;
 			voice->step   = 0;
-			voice->volume = (float)velocity / 127 / 4;
+			voice->volume = (float)velocity / 127 / 4 * 32768;
 
 			if(prog->used) {
 				int freq = keyFrequency(key);
@@ -398,6 +398,7 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 					if(sample->lowFrequency <= (freq + TOL) && freq <= (sample->highFrequency + TOL)) {
 						voice->sample = sample;
 						voice->step   = (unsigned int)((double)freq / sample->rootFrequency * 65536);
+						voice->loop   = sample->loop && !sample->loopBi && !sample->loopBackward;
 					}
 				}
 			}
@@ -411,59 +412,65 @@ void GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int dru
 	self->channels[channel].program = (drum ? 0x80 : 0) | program;
 }
 
-void GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames) {
-	int i;
-
-alloc_again:;
-	if(self->tempBuffer == NULL) {
-		self->tempBuffer  = calloc(frames * 2, sizeof(*self->tempBuffer));
-		self->nTempBuffer = frames;
-	} else if(self->nTempBuffer < frames) {
-		free(self->tempBuffer);
-		self->tempBuffer = NULL;
-
-		goto alloc_again;
+#define RENDER(proc) \
+	int i, j, k; \
+\
+	memset(output, 0, frames * 2 * sizeof(*output)); \
+\
+	for(i = 0; i < GUSPATSYNTH_CHANNELS; i++) { \
+		GUSChannel* channel = &self->channels[i]; \
+\
+		for(j = 0; j < GUSPATSYNTH_VOICES; j++) { \
+			GUSVoice*  voice  = &channel->voices[j]; \
+			GUSSample* sample = voice->sample; \
+\
+			if(!voice->used) continue; \
+\
+			for(k = 0; k < frames; k++) { \
+				int    x    = voice->x >> 16; \
+				short* wave = &sample->wave[x * 2]; \
+\
+				proc \
+\
+				    voice->x += voice->step; \
+\
+				/* TODO: implement more than forward loop */ \
+				if(voice->loop && x >= sample->endLoop) { \
+					voice->x = (sample->startLoop + (x - sample->endLoop)) << 16; \
+				} else if(!sample->loop && x >= sample->nWaveFrames) { \
+					voice->used = 0; \
+				} \
+\
+				if(x >= sample->nWaveFrames) voice->x = (sample->nWaveFrames - 1) << 16; \
+			} \
+		} \
 	}
 
-	GUSPatSynth_RenderFloat(self, self->tempBuffer, frames);
+void GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames) {
+	int* mix = calloc(frames * 2, sizeof(*mix));
 
-	for(i = 0; i < 2 * frames; i++) output[i] = self->tempBuffer[i] * 32767;
+	RENDER({
+		mix[k * 2 + 0] += ((int)wave[0] * voice->volume) >> 16;
+		mix[k * 2 + 1] += ((int)wave[1] * voice->volume) >> 16;
+	});
+
+	for(i = 0; i < frames * 2; i++) {
+		int n = mix[i];
+
+		if(n < -32767) n = -32767;
+		if(n > 32767) n = 32767;
+
+		output[i] = n;
+	}
+
+	free(mix);
 }
 
 void GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames) {
-	int i, j, k;
-
-	memset(output, 0, frames * 2 * sizeof(*output));
-
-	for(i = 0; i < GUSPATSYNTH_CHANNELS; i++) {
-		GUSChannel* channel = &self->channels[i];
-
-		for(j = 0; j < GUSPATSYNTH_VOICES; j++) {
-			GUSVoice*  voice  = &channel->voices[j];
-			GUSSample* sample = voice->sample;
-
-			if(!voice->used) continue;
-
-			for(k = 0; k < frames; k++) {
-				int    x    = voice->x >> 16;
-				float* wave = &sample->wave[x * 2];
-
-				output[k * 2 + 0] += wave[0] * voice->volume;
-				output[k * 2 + 1] += wave[1] * voice->volume;
-
-				voice->x += voice->step;
-
-				/* TODO: implement more than forward loop */
-				if(sample->loop && !sample->loopBi && !sample->loopBackward && x >= sample->endLoop) {
-					voice->x = (sample->startLoop + (x - sample->endLoop)) << 16;
-				} else if(!sample->loop && x >= sample->nWaveFrames) {
-					voice->used = 0;
-				}
-
-				if(x >= sample->nWaveFrames) voice->x = (sample->nWaveFrames - 1) << 16;
-			}
-		}
-	}
+	RENDER({
+		output[k * 2 + 0] += (float)wave[0] / 32767 * (voice->volume / 32768.0);
+		output[k * 2 + 1] += (float)wave[1] / 32767 * (voice->volume / 32768.0);
+	});
 
 	for(i = 0; i < frames * 2; i++) {
 		float n = output[i];
@@ -481,8 +488,6 @@ void GUSPatSynth_Destroy(GUSPatSynth* self) {
 	for(i = 0; i < 2; i++) {
 		for(j = 0; j < 128; j++) GUSPatSynth_Unload(self, j, i);
 	}
-
-	if(self->tempBuffer != NULL) free(self->tempBuffer);
 
 	free(self);
 }
