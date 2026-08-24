@@ -1,0 +1,10 @@
+file(GLOB PMIDI_SOURCES *.c)
+add_executable(pmidi ${PMIDI_SOURCES})
+target_link_libraries(pmidi PRIVATE pmidisynth)
+
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Windows")
+	target_link_libraries(pmidi PRIVATE m)
+endif()
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+	target_link_libraries(pmidi PRIVATE dl)
+endif()

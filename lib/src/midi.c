@@ -1,4 +1,4 @@
-#include "midi.h"
+#include <pmidisynth/midi.h>
 
 static __inline unsigned int read8(FileStream* fs) {
 	unsigned char n;

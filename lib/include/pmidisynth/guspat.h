@@ -1,7 +1,7 @@
-#ifndef __GUSPAT_H__
-#define __GUSPAT_H__
+#ifndef __PMIDISYNTH_GUSPAT_H__
+#define __PMIDISYNTH_GUSPAT_H__
 
-#include <filestream.h>
+#include <pmidisynth/fs.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -13,8 +13,8 @@ typedef struct GUSVoice	   GUSVoice;
 typedef struct GUSChannel  GUSChannel;
 typedef struct GUSPatSynth GUSPatSynth;
 
-#define GUSPAT_VOICES 32
-#define GUSPAT_CHANNELS 128
+#define GUSPATSYNTH_VOICES 32
+#define GUSPATSYNTH_CHANNELS 128
 
 struct GUSSample {
 	unsigned int lowFrequency;
@@ -56,14 +56,14 @@ struct GUSVoice {
 struct GUSChannel {
 	int program; /* OR 0x80 to make it drum */
 
-	GUSVoice voices[GUSPAT_VOICES];
+	GUSVoice voices[GUSPATSYNTH_VOICES];
 };
 
 struct GUSPatSynth {
 	int rate;
 
 	GUSProgram programs[128 * 2]; /* OR 0x80 to make it drum program */
-	GUSChannel channels[GUSPAT_CHANNELS];
+	GUSChannel channels[GUSPATSYNTH_CHANNELS];
 };
 
 GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate);

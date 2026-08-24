@@ -1,5 +1,5 @@
-#include <midi.h>
-#include <guspat.h>
+#include <pmidisynth/midi.h>
+#include <pmidisynth/guspat.h>
 
 #include "miniaudio.h"
 #include "stb_ds.h"

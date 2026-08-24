@@ -1,7 +1,7 @@
-#ifndef __MIDI_H__
-#define __MIDI_H__
+#ifndef __PMIDISYNTH_MIDI_H__
+#define __PMIDISYNTH_MIDI_H__
 
-#include <filestream.h>
+#include <pmidisynth/fs.h>
 
 #include <stdlib.h>
 #include <string.h>

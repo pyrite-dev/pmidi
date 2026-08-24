@@ -1,4 +1,4 @@
-#include "filestream.h"
+#include <pmidisynth/fs.h>
 
 // #define LOAD_ALL
 

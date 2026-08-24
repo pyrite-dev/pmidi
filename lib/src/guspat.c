@@ -1,4 +1,4 @@
-#include "guspat.h"
+#include <pmidisynth/guspat.h>
 
 #define LINESZ 1024
 #define TOL 0
@@ -369,7 +369,7 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 	int i;
 
 	if(velocity == 0) {
-		for(i = 0; i < GUSPAT_VOICES; i++) {
+		for(i = 0; i < GUSPATSYNTH_VOICES; i++) {
 			GUSVoice* voice = &self->channels[channel].voices[i];
 			if(voice->key == key) {
 				voice->used = 0;
@@ -378,9 +378,9 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 	} else {
 		GUSVoice* voice;
 
-		for(i = 0; i < GUSPAT_VOICES && (voice = &self->channels[channel].voices[i])->used; i++);
+		for(i = 0; i < GUSPATSYNTH_VOICES && (voice = &self->channels[channel].voices[i])->used; i++);
 
-		if(i < GUSPAT_VOICES) {
+		if(i < GUSPATSYNTH_VOICES) {
 			GUSProgram* prog = &self->programs[self->channels[channel].program];
 
 			voice->key	= key;
@@ -427,10 +427,10 @@ void GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames) {
 
 	memset(output, 0, frames * 2 * sizeof(*output));
 
-	for(i = 0; i < GUSPAT_CHANNELS; i++) {
+	for(i = 0; i < GUSPATSYNTH_CHANNELS; i++) {
 		GUSChannel* channel = &self->channels[i];
 
-		for(j = 0; j < GUSPAT_VOICES; j++) {
+		for(j = 0; j < GUSPATSYNTH_VOICES; j++) {
 			GUSVoice* voice = &channel->voices[j];
 
 			if(!voice->used) continue;
