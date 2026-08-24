@@ -1,7 +1,7 @@
-#ifndef __PMIDISYNTH_MIDI_H__
-#define __PMIDISYNTH_MIDI_H__
+#ifndef __TURBOSYNTH_MIDI_H__
+#define __TURBOSYNTH_MIDI_H__
 
-#include <pmidisynth/fs.h>
+#include <turbosynth/fs.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -27,7 +27,13 @@ typedef void (*MidiCallback)(MidiStream* ms, const MidiEvent* event);
 
 enum MidiEventType {
 	MidiEventNote = 0,
+	MidiEventControl,
 	MidiEventProgramChange
+};
+
+enum MidiControlType {
+	MidiControlBankSelectMSB = 0,
+	MidiControlBankSelectLSB = 32
 };
 
 union MidiEvent {
@@ -38,6 +44,12 @@ union MidiEvent {
 		unsigned char key;
 		unsigned char velocity;
 	} note;
+	struct {
+		unsigned char type;
+		unsigned char channel;
+		unsigned char key;
+		unsigned char value;
+	} control;
 	struct {
 		unsigned char type;
 		unsigned char channel;
@@ -71,6 +83,8 @@ struct MidiStream {
 	double currentSec;
 
 	MidiTrack* tracks;
+
+	void* user;
 };
 
 MidiStream* MidiStream_New(FileStream* fs, MidiCallback callback);

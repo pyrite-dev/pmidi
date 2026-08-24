@@ -1,5 +1,5 @@
-#include <pmidisynth/midi.h>
-#include <pmidisynth/guspat.h>
+#include <turbosynth/midi.h>
+#include <turbosynth/guspat.h>
 
 #include <SDL.h>
 #include <SDL_opengl.h>
@@ -101,8 +101,18 @@ static void hsv2rgb(double* in, double* out) {
 static void audioCallback(MidiStream* ms, const MidiEvent* event) {
 	if(event->type == MidiEventNote) {
 		GUSPatSynth_Note(gGUSPatSynth, event->note.channel, event->note.key, event->note.velocity);
+	} else if(event->type == MidiEventControl) {
+		if(event->control.key == MidiControlBankSelectMSB) {
+			GUSPatSynth_SetBankMSB(gGUSPatSynth, event->control.channel, event->control.value);
+		} else if(event->control.key == MidiControlBankSelectLSB) {
+			GUSPatSynth_SetBankLSB(gGUSPatSynth, event->control.channel, event->control.value);
+		}
 	} else if(event->type == MidiEventProgramChange) {
-		GUSPatSynth_SetProgram(gGUSPatSynth, event->programChange.channel, event->programChange.program, event->programChange.channel == 9 ? 1 : 0);
+		int drum = 0;
+
+		if(gGUSPatSynth->channels[event->programChange.channel].bankMsb == 120 || event->programChange.channel == 9) drum = 1;
+
+		GUSPatSynth_SetProgram(gGUSPatSynth, event->programChange.channel, event->programChange.program, drum);
 	}
 }
 

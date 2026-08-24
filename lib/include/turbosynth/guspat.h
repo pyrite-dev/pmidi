@@ -1,7 +1,7 @@
-#ifndef __PMIDISYNTH_GUSPAT_H__
-#define __PMIDISYNTH_GUSPAT_H__
+#ifndef __TURBOSYNTH_GUSPAT_H__
+#define __TURBOSYNTH_GUSPAT_H__
 
-#include <pmidisynth/fs.h>
+#include <turbosynth/fs.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +11,7 @@ typedef struct GUSSample   GUSSample;
 typedef struct GUSProgram  GUSProgram;
 typedef struct GUSVoice	   GUSVoice;
 typedef struct GUSChannel  GUSChannel;
+typedef struct GUSBank	   GUSBank;
 typedef struct GUSPatSynth GUSPatSynth;
 
 #define GUSPATSYNTH_VOICES 128
@@ -40,6 +41,7 @@ struct GUSProgram {
 
 	int used;
 };
+typedef GUSProgram GUSProgramSet[128 * 2]; /* OR 0x80 to make it drum program */
 
 struct GUSVoice {
 	int key;
@@ -57,21 +59,34 @@ struct GUSVoice {
 struct GUSChannel {
 	int program; /* OR 0x80 to make it drum */
 
+	int bank;
+	int bankMsb;
+	int bankLsb;
+
 	GUSVoice voices[GUSPATSYNTH_VOICES];
+};
+
+struct GUSBank {
+	int	       indices[128];
+	GUSProgramSet* sets;
+	int	       nSets;
 };
 
 struct GUSPatSynth {
 	int rate;
 
-	GUSProgram programs[128 * 2]; /* OR 0x80 to make it drum program */
+	GUSBank	   bank;
 	GUSChannel channels[GUSPATSYNTH_CHANNELS];
 };
 
 GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate);
-int	     GUSPatSynth_Load(GUSPatSynth* self, int program, int drum, FileStream* fs); /* true if success */
-void	     GUSPatSynth_Unload(GUSPatSynth* self, int program, int drum);
+int	     GUSPatSynth_Load(GUSPatSynth* self, int bank, int program, int drum, FileStream* fs); /* true if success */
+void	     GUSPatSynth_Unload(GUSPatSynth* self, int bank, int program, int drum);
 void	     GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity);
 void	     GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int drum);
+void	     GUSPatSynth_SetBank(GUSPatSynth* self, int channel, int bank); /* immedaite change; use SetBankMSB/SetBankLSB if you are passing MIDI messages */
+void	     GUSPatSynth_SetBankMSB(GUSPatSynth* self, int channel, int bank);
+void	     GUSPatSynth_SetBankLSB(GUSPatSynth* self, int channel, int bank);
 void	     GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames);
 void	     GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames);
 void	     GUSPatSynth_Destroy(GUSPatSynth* self);

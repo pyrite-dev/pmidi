@@ -1,9 +1,29 @@
 cmake_minimum_required(VERSION 3.11)
-project(pmidisynth)
+project(turbosynth)
 
-file(GLOB LIBPMIDISYNTH_SOURCES src/*.c)
-add_library(pmidisynth STATIC ${LIBPMIDISYNTH_SOURCES})
-target_include_directories(pmidisynth PUBLIC include)
+file(GLOB LIBTURBOSYNTH_SOURCES src/*.c)
+add_library(turbosynth STATIC ${LIBTURBOSYNTH_SOURCES})
+target_include_directories(turbosynth PUBLIC include)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-	target_compile_definitions(pmidisynth PRIVATE DEBUG)
+	target_compile_definitions(turbosynth PRIVATE DEBUG)
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+	set(FS_SYMS "'_FileStream_New', '_FileStream_Destroy'")
+	set(MIDI_SYMS "'_MidiStream_New', '_MidiStream_Advance', '_MidiStream_Destroy'")
+	set(GUSPAT_SYMS "'_GUSPatSynth_New', '_GUSPatSynth_Load', '_GUSPatSynth_Unload', '_GUSPatSynth_Note', '_GUSPatSynth_SetProgram', '_GUSPatSynth_SetBank', '_GUSPatSynth_SetBankMSB', '_GUSPatSynth_SetBankLSB', '_GUSPatSynth_RenderShort', '_GUSPatSynth_RenderFloat', '_GUSPatSynth_Destroy'")
+	set(EASYMIDI_SYMS "'_EasyMidi_New', '_EasyMidi_New2', '_EasyMidi_MidiCallback', '_EasyMidi_Load', '_EasyMidi_Load2', '_EasyMidi_IsFinished', '_EasyMidi_RenderShort', '_EasyMidi_RenderFloat', '_EasyMidi_Destroy'")
+	add_executable(turbosynthjs turbosynthjs.c)
+	target_link_options(turbosynthjs PRIVATE
+		"-sWASM=1"
+		"-sSINGLE_FILE=1"
+		"-sSINGLE_FILE_BINARY_ENCODE=0"
+		"-sEXPORTED_FUNCTIONS=[${FS_SYMS}, ${MIDI_SYMS}, ${GUSPAT_SYMS}, ${EASYMIDI_SYMS}]"
+		"-sEXPORTED_RUNTIME_METHODS=[\"cwrap\", \"ccall\", \"HEAPF32\", \"addFunction\"]"
+		"-sMODULARIZE=1"
+		"-sALLOW_TABLE_GROWTH=1"
+		"-sSTACK_SIZE=1048576"
+		"-sEXPORT_NAME=TurboSynthWASM"
+	)
+	target_link_libraries(turbosynthjs PRIVATE turbosynth)
 endif()

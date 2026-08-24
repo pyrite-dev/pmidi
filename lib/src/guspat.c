@@ -1,4 +1,4 @@
-#include <pmidisynth/guspat.h>
+#include <turbosynth/guspat.h>
 
 #define LINESZ 1024
 #define TOL 0
@@ -79,9 +79,11 @@ GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate) {
 	char	     line[LINESZ + 1];
 	char	     c[2];
 	int	     comment = 0;
-	int	     num     = -1; /* -1 to ignore numbers, 0 if bank 0, 1 if drumset 0. */
+	int	     num     = -1; /* -1 to ignore numbers */
 
 	self->rate = rate;
+
+	if(fs == NULL) return self;
 
 	line[0] = 0;
 	c[1]	= 0;
@@ -103,7 +105,7 @@ GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate) {
 					if(*arg1 == '"' || *arg1 == '\'') arg1++;
 					if(arg1[strlen(arg1) - 1] == '"' || arg1[strlen(arg1) - 1] == '\'') arg1[strlen(arg1)] = 0;
 
-					if((num == 0 || num == 1) && '0' <= arg0[0] && arg0[0] <= '9') {
+					if((num != -1) && '0' <= arg0[0] && arg0[0] <= '9') {
 						int program = atoi(arg0);
 
 						if(0 <= program && program < 128) {
@@ -114,7 +116,7 @@ GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate) {
 							strcat(patchpath, ".pat");
 
 							if((patch = FileStream_New(arg1)) != NULL || (patch = FileStream_New(patchpath)) != NULL) {
-								if(!GUSPatSynth_Load(self, program, num, patch)) {
+								if(!GUSPatSynth_Load(self, num & 0xff, program, num & (1 << 8), patch)) {
 									FileStream_Destroy(patch);
 									free(patchpath);
 									GUSPatSynth_Destroy(self);
@@ -131,10 +133,17 @@ GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate) {
 								return NULL;
 							}
 						}
-					} else if(strcmp(arg0, "bank") == 0) {
-						num = strcmp(arg1, "0") == 0 ? 0 : -1;
-					} else if(strcmp(arg0, "drumset") == 0) {
-						num = strcmp(arg1, "0") == 0 ? 1 : -1;
+					} else if(strcmp(arg0, "bank") == 0 || strcmp(arg0, "drumset") == 0) {
+						num = atoi(arg1) | (strcmp(arg0, "drumset") == 0 ? (1 << 8) : 0);
+
+						if(self->bank.indices[num & 0xff] == 0) {
+							self->bank.indices[num & 0xff] = self->bank.nSets + 1;
+
+							self->bank.sets = self->bank.nSets == 0 ? malloc(sizeof(*self->bank.sets)) : realloc(self->bank.sets, sizeof(*self->bank.sets) * (self->bank.nSets + 1));
+							memset(self->bank.sets[self->bank.nSets], 0, sizeof(*self->bank.sets));
+
+							self->bank.nSets++;
+						}
 					}
 				}
 			}
@@ -356,13 +365,23 @@ static void unloadPatch(GUSProgram* prog) {
 	}
 }
 
-int GUSPatSynth_Load(GUSPatSynth* self, int program, int drum, FileStream* fs) {
-	if(self->programs[(drum ? 0x80 : 0) | program].used) GUSPatSynth_Unload(self, program, drum);
-	return loadPatch(&self->programs[(drum ? 0x80 : 0) | program], fs, self->rate);
+static GUSProgramSet* getProgramSet(GUSPatSynth* self, int bank) {
+	if(!self->bank.indices[bank]) return NULL;
+
+	return &self->bank.sets[self->bank.indices[bank] - 1];
 }
 
-void GUSPatSynth_Unload(GUSPatSynth* self, int program, int drum) {
-	unloadPatch(&self->programs[(drum ? 0x80 : 0) | program]);
+int GUSPatSynth_Load(GUSPatSynth* self, int bank, int program, int drum, FileStream* fs) {
+	GUSProgramSet* ps = getProgramSet(self, bank);
+
+	if((*ps)[(drum ? 0x80 : 0) | program].used) GUSPatSynth_Unload(self, bank, program, drum);
+	return loadPatch(&(*ps)[(drum ? 0x80 : 0) | program], fs, self->rate);
+}
+
+void GUSPatSynth_Unload(GUSPatSynth* self, int bank, int program, int drum) {
+	GUSProgramSet* ps = getProgramSet(self, bank);
+
+	unloadPatch(&(*ps)[(drum ? 0x80 : 0) | program]);
 }
 
 void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
@@ -381,7 +400,8 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 		for(i = 0; i < GUSPATSYNTH_VOICES && (voice = &self->channels[channel].voices[i])->used; i++);
 
 		if(i < GUSPATSYNTH_VOICES) {
-			GUSProgram* prog = &self->programs[self->channels[channel].program];
+			GUSProgramSet* ps   = getProgramSet(self, self->channels[channel].bank);
+			GUSProgram*    prog = &(*ps)[self->channels[channel].program >= 0x80 ? (0x80 | key) : self->channels[channel].program];
 
 			voice->key    = key;
 			voice->sample = NULL;
@@ -409,7 +429,24 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 }
 
 void GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int drum) {
+	int bank = (self->channels[channel].bankMsb << 8) | self->channels[channel].bankLsb;
+
+	GUSPatSynth_SetBank(self, channel, bank);
 	self->channels[channel].program = (drum ? 0x80 : 0) | program;
+}
+
+void GUSPatSynth_SetBank(GUSPatSynth* self, int channel, int bank) {
+	if(getProgramSet(self, bank) != NULL) self->channels[channel].bank = bank;
+	self->channels[channel].bankMsb = (bank >> 8) & 0xff;
+	self->channels[channel].bankLsb = bank & 0xff;
+}
+
+void GUSPatSynth_SetBankMSB(GUSPatSynth* self, int channel, int bank) {
+	self->channels[channel].bankMsb = bank;
+}
+
+void GUSPatSynth_SetBankLSB(GUSPatSynth* self, int channel, int bank) {
+	self->channels[channel].bankLsb = bank;
 }
 
 #define RENDER(proc) \
@@ -483,11 +520,17 @@ void GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames) {
 }
 
 void GUSPatSynth_Destroy(GUSPatSynth* self) {
-	int i, j;
+	int i, j, k;
 
-	for(i = 0; i < 2; i++) {
-		for(j = 0; j < 128; j++) GUSPatSynth_Unload(self, j, i);
+	for(i = 0; i < 128; i++) {
+		if(getProgramSet(self, i) == NULL) continue;
+
+		for(j = 0; j < 2; j++) {
+			for(k = 0; k < 128; k++) GUSPatSynth_Unload(self, i, k, j);
+		}
 	}
+
+	if(self->bank.sets != NULL) free(self->bank.sets);
 
 	free(self);
 }

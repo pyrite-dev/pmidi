@@ -1,5 +1,5 @@
-#include <pmidisynth/midi.h>
-#include <pmidisynth/guspat.h>
+#include <turbosynth/midi.h>
+#include <turbosynth/guspat.h>
 
 #include "miniaudio.h"
 #include "stb_ds.h"
@@ -27,8 +27,18 @@ static buffer_t* gBuffer = NULL;
 static void callback(MidiStream* ms, const MidiEvent* event) {
 	if(event->type == MidiEventNote) {
 		GUSPatSynth_Note(gGUSPatSynth, event->note.channel, event->note.key, event->note.velocity);
+	} else if(event->type == MidiEventControl) {
+		if(event->control.key == MidiControlBankSelectMSB) {
+			GUSPatSynth_SetBankMSB(gGUSPatSynth, event->control.channel, event->control.value);
+		} else if(event->control.key == MidiControlBankSelectLSB) {
+			GUSPatSynth_SetBankLSB(gGUSPatSynth, event->control.channel, event->control.value);
+		}
 	} else if(event->type == MidiEventProgramChange) {
-		GUSPatSynth_SetProgram(gGUSPatSynth, event->programChange.channel, event->programChange.program, event->programChange.channel == 9 ? 1 : 0);
+		int drum = 0;
+
+		if(gGUSPatSynth->channels[event->programChange.channel].bankMsb == 120 || event->programChange.channel == 9) drum = 1;
+
+		GUSPatSynth_SetProgram(gGUSPatSynth, event->programChange.channel, event->programChange.program, drum);
 	}
 }
 
@@ -162,10 +172,13 @@ int main(int argc, char** argv) {
 	}
 
 quit:;
+	ma_mutex_uninit(&gBufferMutex);
 	ma_device_uninit(&device);
 	MidiStream_Destroy(ms);
 	FileStream_Destroy(fs);
 	GUSPatSynth_Destroy(gGUSPatSynth);
+
+	arrfree(gBuffer);
 
 	return 0;
 }

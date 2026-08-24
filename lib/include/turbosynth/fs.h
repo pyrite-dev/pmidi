@@ -1,5 +1,5 @@
-#ifndef __PMIDISYNTH_FILESTREAM_H__
-#define __PMIDISYNTH_FILESTREAM_H__
+#ifndef __TURBOSYNTH_FILESTREAM_H__
+#define __TURBOSYNTH_FILESTREAM_H__
 
 #include <stdlib.h>
 #include <string.h>

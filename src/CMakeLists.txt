@@ -1,6 +1,6 @@
 file(GLOB PMIDI_SOURCES *.c)
 add_executable(pmidi ${PMIDI_SOURCES})
-target_link_libraries(pmidi PRIVATE pmidisynth)
+target_link_libraries(pmidi PRIVATE turbosynth)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Windows")
 	target_link_libraries(pmidi PRIVATE m)

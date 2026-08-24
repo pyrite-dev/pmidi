@@ -1,4 +1,4 @@
-#include <pmidisynth/midi.h>
+#include <turbosynth/midi.h>
 
 static __inline unsigned int read8(FileStream* fs) {
 	unsigned char n;
@@ -141,9 +141,12 @@ static void readEvent(MidiStream* self, MidiTrack* track) {
 		break;
 
 	case 0xb0:
-		/* TODO */
-		read16(self->fs);
+		ev.type		   = MidiEventControl;
+		ev.control.channel = op & 0x0f;
+		ev.control.key	   = read8(self->fs);
+		ev.control.value   = read8(self->fs);
 
+		self->callback(self, &ev);
 		break;
 
 	case 0xc0:
