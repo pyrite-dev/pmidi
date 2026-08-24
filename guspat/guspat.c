@@ -74,12 +74,12 @@ static unsigned int keyFrequency(int note) {
 	return freqTable[note];
 }
 
-GUSPat* GUSPat_New(FileStream* fs, int rate) {
-	GUSPat* self = calloc(1, sizeof(*self));
-	char	line[LINESZ + 1];
-	char	c[2];
-	int	comment = 0;
-	int	num	= -1; /* -1 to ignore numbers, 0 if bank 0, 1 if drumset 0. */
+GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate) {
+	GUSPatSynth* self = calloc(1, sizeof(*self));
+	char	     line[LINESZ + 1];
+	char	     c[2];
+	int	     comment = 0;
+	int	     num     = -1; /* -1 to ignore numbers, 0 if bank 0, 1 if drumset 0. */
 
 	self->rate = rate;
 
@@ -114,10 +114,10 @@ GUSPat* GUSPat_New(FileStream* fs, int rate) {
 							strcat(patchpath, ".pat");
 
 							if((patch = FileStream_New(arg1)) != NULL || (patch = FileStream_New(patchpath)) != NULL) {
-								if(!GUSPat_Load(self, program, num, patch)) {
+								if(!GUSPatSynth_Load(self, program, num, patch)) {
 									FileStream_Destroy(patch);
 									free(patchpath);
-									GUSPat_Destroy(self);
+									GUSPatSynth_Destroy(self);
 
 									return NULL;
 								}
@@ -126,7 +126,7 @@ GUSPat* GUSPat_New(FileStream* fs, int rate) {
 								free(patchpath);
 							} else {
 								free(patchpath);
-								GUSPat_Destroy(self);
+								GUSPatSynth_Destroy(self);
 
 								return NULL;
 							}
@@ -350,16 +350,16 @@ static void unloadPatch(GUSProgram* prog) {
 	}
 }
 
-int GUSPat_Load(GUSPat* self, int program, int drum, FileStream* fs) {
-	if(self->programs[(drum ? 0x80 : 0) | program].used) GUSPat_Unload(self, program, drum);
+int GUSPatSynth_Load(GUSPatSynth* self, int program, int drum, FileStream* fs) {
+	if(self->programs[(drum ? 0x80 : 0) | program].used) GUSPatSynth_Unload(self, program, drum);
 	return loadPatch(&self->programs[(drum ? 0x80 : 0) | program], fs, self->rate);
 }
 
-void GUSPat_Unload(GUSPat* self, int program, int drum) {
+void GUSPatSynth_Unload(GUSPatSynth* self, int program, int drum) {
 	unloadPatch(&self->programs[(drum ? 0x80 : 0) | program]);
 }
 
-void GUSPat_Note(GUSPat* self, int channel, int key, int velocity) {
+void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 	int i;
 
 	if(velocity == 0) {
@@ -403,22 +403,22 @@ void GUSPat_Note(GUSPat* self, int channel, int key, int velocity) {
 	}
 }
 
-void GUSPat_SetProgram(GUSPat* self, int channel, int program, int drum) {
+void GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int drum) {
 	self->channels[channel].program = (drum ? 0x80 : 0) | program;
 }
 
-void GUSPat_RenderShort(GUSPat* self, short* output, int frames) {
+void GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames) {
 	float* f = calloc(frames * 2, sizeof(*f));
 	int    i;
 
-	GUSPat_RenderFloat(self, f, frames);
+	GUSPatSynth_RenderFloat(self, f, frames);
 
 	for(i = 0; i < 2 * frames; i++) output[i] = f[i] * 32767;
 
 	free(f);
 }
 
-void GUSPat_RenderFloat(GUSPat* self, float* output, int frames) {
+void GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames) {
 	int i, j, k;
 
 	memset(output, 0, frames * 2 * sizeof(*output));
@@ -461,11 +461,11 @@ void GUSPat_RenderFloat(GUSPat* self, float* output, int frames) {
 	}
 }
 
-void GUSPat_Destroy(GUSPat* self) {
+void GUSPatSynth_Destroy(GUSPatSynth* self) {
 	int i, j;
 
 	for(i = 0; i < 2; i++) {
-		for(j = 0; j < 128; j++) GUSPat_Unload(self, j, i);
+		for(j = 0; j < 128; j++) GUSPatSynth_Unload(self, j, i);
 	}
 
 	free(self);

@@ -4,8 +4,8 @@
 
 #include <math.h>
 
-static GUSPat* gGUSPat;
-static int     gUseGUSPat;
+static GUSPatSynth* gGUSPatSynth;
+static int	    gUseGUSPatSynth;
 
 #ifndef M_PI
 #define M_PI 3.14159265
@@ -27,11 +27,11 @@ typedef struct channel {
 channel_t channels[128] = {0};
 
 static void callback(MidiStream* ms, const MidiEvent* event) {
-	if(gUseGUSPat) {
+	if(gUseGUSPatSynth) {
 		if(event->type == MidiEventNote) {
-			GUSPat_Note(gGUSPat, event->note.channel, event->note.key, event->note.velocity);
+			GUSPatSynth_Note(gGUSPatSynth, event->note.channel, event->note.key, event->note.velocity);
 		} else if(event->type == MidiEventProgramChange) {
-			GUSPat_SetProgram(gGUSPat, event->programChange.channel, event->programChange.program, event->programChange.channel == 9 ? 1 : 0);
+			GUSPatSynth_SetProgram(gGUSPatSynth, event->programChange.channel, event->programChange.program, event->programChange.channel == 9 ? 1 : 0);
 		}
 	} else {
 		if(event->type == MidiEventNote) {
@@ -63,8 +63,8 @@ static void callback(MidiStream* ms, const MidiEvent* event) {
 }
 
 static void render(short* out, int frames) {
-	if(gUseGUSPat) {
-		GUSPat_RenderShort(gGUSPat, out, frames);
+	if(gUseGUSPatSynth) {
+		GUSPatSynth_RenderShort(gGUSPatSynth, out, frames);
 	} else {
 		int i, j, k;
 
@@ -102,9 +102,9 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	gUseGUSPat = argc == 3 ? 1 : 0;
+	gUseGUSPatSynth = argc == 3 ? 1 : 0;
 
-	if(gUseGUSPat) {
+	if(gUseGUSPatSynth) {
 		FileStream* cfgfs;
 
 		if((cfgfs = FileStream_New(argv[1])) == NULL) {
@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
 			return 1;
 		}
 
-		if((gGUSPat = GUSPat_New(cfgfs, 48000)) == NULL) {
+		if((gGUSPatSynth = GUSPatSynth_New(cfgfs, 48000)) == NULL) {
 			FileStream_Destroy(cfgfs);
 
 			fprintf(stderr, "cannot open gus patches\n");
@@ -122,15 +122,15 @@ int main(int argc, char** argv) {
 		FileStream_Destroy(cfgfs);
 	}
 
-	if((fs = FileStream_New(gUseGUSPat ? argv[2] : argv[1])) == NULL) {
-		if(gUseGUSPat) GUSPat_Destroy(gGUSPat);
+	if((fs = FileStream_New(gUseGUSPatSynth ? argv[2] : argv[1])) == NULL) {
+		if(gUseGUSPatSynth) GUSPatSynth_Destroy(gGUSPatSynth);
 
 		fprintf(stderr, "cannot open midi\n");
 		return 1;
 	}
 
 	if((ms = MidiStream_New(fs, callback)) == NULL) {
-		if(gUseGUSPat) GUSPat_Destroy(gGUSPat);
+		if(gUseGUSPatSynth) GUSPatSynth_Destroy(gGUSPatSynth);
 		FileStream_Destroy(fs);
 
 		fprintf(stderr, "cannot open midi\n");
@@ -146,7 +146,7 @@ int main(int argc, char** argv) {
 	spec.samples  = 2048;
 
 	if((dev = SDL_OpenAudioDevice(NULL, 0, &spec, NULL, 0)) == 0) {
-		if(gUseGUSPat) GUSPat_Destroy(gGUSPat);
+		if(gUseGUSPatSynth) GUSPatSynth_Destroy(gGUSPatSynth);
 		FileStream_Destroy(fs);
 		MidiStream_Destroy(ms);
 
@@ -177,7 +177,7 @@ int main(int argc, char** argv) {
 	}
 
 quit:;
-	if(gUseGUSPat) GUSPat_Destroy(gGUSPat);
+	if(gUseGUSPatSynth) GUSPatSynth_Destroy(gGUSPatSynth);
 	FileStream_Destroy(fs);
 	MidiStream_Destroy(ms);
 

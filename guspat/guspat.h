@@ -8,11 +8,11 @@
 #include <stdio.h>
 #include <math.h>
 
-typedef struct GUSSample  GUSSample;
-typedef struct GUSProgram GUSProgram;
-typedef struct GUSVoice	  GUSVoice;
-typedef struct GUSChannel GUSChannel;
-typedef struct GUSPat	  GUSPat;
+typedef struct GUSSample   GUSSample;
+typedef struct GUSProgram  GUSProgram;
+typedef struct GUSVoice	   GUSVoice;
+typedef struct GUSChannel  GUSChannel;
+typedef struct GUSPatSynth GUSPatSynth;
 
 #define GUSPAT_VOICES 32
 #define GUSPAT_CHANNELS 128
@@ -60,20 +60,20 @@ struct GUSChannel {
 	GUSVoice voices[GUSPAT_VOICES];
 };
 
-struct GUSPat {
+struct GUSPatSynth {
 	int rate;
 
 	GUSProgram programs[128 * 2]; /* OR 0x80 to make it drum program */
 	GUSChannel channels[GUSPAT_CHANNELS];
 };
 
-GUSPat* GUSPat_New(FileStream* fs, int rate);
-int	GUSPat_Load(GUSPat* self, int program, int drum, FileStream* fs); /* true if success */
-void	GUSPat_Unload(GUSPat* self, int program, int drum);
-void	GUSPat_Note(GUSPat* self, int channel, int key, int velocity);
-void	GUSPat_SetProgram(GUSPat* self, int channel, int program, int drum);
-void	GUSPat_RenderShort(GUSPat* self, short* output, int frames);
-void	GUSPat_RenderFloat(GUSPat* self, float* output, int frames);
-void	GUSPat_Destroy(GUSPat* self);
+GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate);
+int	     GUSPatSynth_Load(GUSPatSynth* self, int program, int drum, FileStream* fs); /* true if success */
+void	     GUSPatSynth_Unload(GUSPatSynth* self, int program, int drum);
+void	     GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity);
+void	     GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int drum);
+void	     GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames);
+void	     GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames);
+void	     GUSPatSynth_Destroy(GUSPatSynth* self);
 
 #endif
