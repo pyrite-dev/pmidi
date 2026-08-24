@@ -5,8 +5,9 @@
 #include <SDL_opengl.h>
 
 #define BUFSZ 800
-#define BUFFERS 40
-#define VOICES GUSPATSYNTH_VOICES
+#define BUFFERS 10
+#define FACTOR 4
+#define VOICES (GUSPATSYNTH_VOICES * 16) / FACTOR
 
 typedef struct voice   voice_t;
 typedef struct channel channel_t;
@@ -35,7 +36,13 @@ static GUSPatSynth* gGUSPatSynth;
 static int	    gWinWidth, gWinHeight;
 static double	    gBegin;
 static piano_t	    gPiano[96];
+static double	    gGetX[96];
+static double	    gGetWidth[96];
 static channel_t    gChannels[128] = {0};
+static FileStream*  gFsAudio;
+static MidiStream*  gMsAudio;
+static FileStream*  gFsVisual;
+static MidiStream*  gMsVisual;
 
 /* taken from stackoverflow */
 static void hsv2rgb(double* in, double* out) {
@@ -91,12 +98,19 @@ static void hsv2rgb(double* in, double* out) {
 	}
 }
 
-static void callback(MidiStream* ms, const MidiEvent* event) {
+static void audioCallback(MidiStream* ms, const MidiEvent* event) {
+	if(event->type == MidiEventNote) {
+		GUSPatSynth_Note(gGUSPatSynth, event->note.channel, event->note.key, event->note.velocity);
+	} else if(event->type == MidiEventProgramChange) {
+		GUSPatSynth_SetProgram(gGUSPatSynth, event->programChange.channel, event->programChange.program, event->programChange.channel == 9 ? 1 : 0);
+	}
+}
+
+static void visualCallback(MidiStream* ms, const MidiEvent* event) {
 	if(event->type == MidiEventNote) {
 		int	   i;
 		channel_t* c = &gChannels[event->note.channel];
 
-#if 0
 		if(event->note.velocity == 0) {
 			for(i = 0; i < VOICES; i++) {
 				voice_t* v = &c->voices[i];
@@ -114,19 +128,14 @@ static void callback(MidiStream* ms, const MidiEvent* event) {
 			v.key	= event->note.key;
 			v.start = ms->currentSec;
 			v.end	= -1;
-			v.used = 1;
+			v.used	= 1;
 
 			for(i = 0; i < VOICES && c->voices[i].used; i++);
 
-			if(i < VOICES){
+			if(i < VOICES) {
 				c->voices[i] = v;
 			}
 		}
-#endif
-
-		GUSPatSynth_Note(gGUSPatSynth, event->note.channel, event->note.key, event->note.velocity);
-	} else if(event->type == MidiEventProgramChange) {
-		GUSPatSynth_SetProgram(gGUSPatSynth, event->programChange.channel, event->programChange.program, event->programChange.channel == 9 ? 1 : 0);
 	}
 }
 
@@ -179,9 +188,9 @@ static void drawPiano(void) {
 
 	for(i = 0; i < 4; i++) {
 		for(j = 0; j < 96; j++) {
-			double x = getX(j);
+			double x = gGetX[j];
 			double y = (isBlack(j) ? BlackHeight : WhiteHeight) + gWinHeight - WhiteHeight;
-			double w = getWidth(j);
+			double w = gGetWidth[j];
 			int    k;
 
 			if(i == 0 && !isBlack(j)) {
@@ -210,61 +219,90 @@ static void drawPiano(void) {
 
 static void drawNotes(void) {
 	int    i, j, k;
-	double t = (SDL_GetTicks() / 1000.0) - gBegin;
+	double t = (SDL_GetTicks() - gBegin) / 1000.0;
 	double hsv[3];
 
 	hsv[1] = 0.8;
 	hsv[2] = 1.0;
 
 	for(k = 0; k < 2; k++) {
+		glBegin(k == 0 ? GL_QUADS : GL_LINES);
 		for(i = 0; i < 128; i++) {
 			channel_t* c = &gChannels[i];
 
 			for(j = 0; j < VOICES; j++) {
 				voice_t* v  = &c->voices[j];
 				double	 x1 = 0, x2 = 0, y1 = 0, y2 = 0;
-				double	 factor = (double)BUFSZ * BUFFERS / 48000 / 4;
-				double	 rgb[3];
+				double	 factor = 1.0 / FACTOR;
+				double*	 rgb	= gPiano[v->key].rgb;
 
 				if(!v->used) continue;
 
-				memcpy(rgb, gPiano[v->key].rgb, sizeof(rgb));
-
-				x1 = getX(v->key);
-				x2 = x1 + getWidth(v->key);
-				y1 = (v->end < 0) ? -100 : (gWinHeight - (v->end - t) / factor * gWinHeight);
+				x1 = gGetX[v->key];
+				x2 = x1 + gGetWidth[v->key];
+				y1 = (v->end < 0) ? -10 : (gWinHeight - (v->end - t) / factor * gWinHeight);
 				y2 = gWinHeight - (v->start - t) / factor * gWinHeight;
-
-				if(k == 1) glColor3f(0, 0, 0);
-
-				glBegin(k == 0 ? GL_QUADS : GL_LINE_LOOP);
-				if(k == 0) glColor3f(rgb[0], rgb[1], rgb[2]);
-				glVertex2f(x1, y1);
-				if(k == 0) glColor3f(rgb[0] - 0.1, rgb[1] - 0.1, rgb[2] - 0.1);
-				glVertex2f(x2, y1);
-				if(k == 0) glColor3f(rgb[0] - 0.1, rgb[1] - 0.1, rgb[2] - 0.1);
-				glVertex2f(x2, y2);
-				if(k == 0) glColor3f(rgb[0], rgb[1], rgb[2]);
-				glVertex2f(x1, y2);
-				glEnd();
-
-				if(gPiano[v->key].playing == 0 && y2 >= (gWinHeight - WhiteHeight)) {
-					gPiano[v->key].playing = 1;
-				}
 
 				if(y1 >= gWinHeight) {
 					gPiano[v->key].playing = 0;
 					c->voices[j].used      = 0;
+				} else {
+					if(k == 1) glColor3f(0, 0, 0);
+
+					if(k == 0) glColor3f(rgb[0], rgb[1], rgb[2]);
+					glVertex2f(x1, y1);
+					if(k == 0) glColor3f(rgb[0] - 0.1, rgb[1] - 0.1, rgb[2] - 0.1);
+					glVertex2f(x2, y1);
+					if(k == 1) glVertex2f(x2, y1);
+					if(k == 0) glColor3f(rgb[0] - 0.1, rgb[1] - 0.1, rgb[2] - 0.1);
+					glVertex2f(x2, y2);
+					if(k == 1) glVertex2f(x2, y2);
+					if(k == 0) glColor3f(rgb[0], rgb[1], rgb[2]);
+					glVertex2f(x1, y2);
+					if(k == 1) {
+						glVertex2f(x1, y2);
+						glVertex2f(x1, y1);
+					}
+
+					if(gPiano[v->key].playing == 0 && y2 >= (gWinHeight - WhiteHeight)) {
+						gPiano[v->key].playing = 1;
+					}
 				}
 			}
 		}
+		glEnd();
 	}
 }
 
+static int openMidi(char** argv) {
+	gFsAudio = gFsVisual = NULL;
+	gMsAudio = gMsVisual = NULL;
+
+	if((gFsAudio = FileStream_New(argv[2])) == NULL) {
+		fprintf(stderr, "cannot open midi\n");
+		return 1;
+	}
+
+	if((gMsAudio = MidiStream_New(gFsAudio, audioCallback)) == NULL) {
+		fprintf(stderr, "cannot open midi\n");
+		return 1;
+	}
+
+	gFsVisual = FileStream_New(argv[2]);
+	gMsVisual = MidiStream_New(gFsVisual, visualCallback);
+
+	return 0;
+}
+
+static void closeMidi(void) {
+	if(gMsAudio != NULL) MidiStream_Destroy(gMsAudio);
+	if(gMsVisual != NULL) MidiStream_Destroy(gMsVisual);
+	if(gFsAudio != NULL) FileStream_Destroy(gFsAudio);
+	if(gFsVisual != NULL) FileStream_Destroy(gFsVisual);
+}
+
 int main(int argc, char** argv) {
-	FileStream*	  fs;
 	FileStream*	  cfgfs;
-	MidiStream*	  ms;
 	SDL_Window*	  window;
 	SDL_Renderer*	  renderer;
 	SDL_AudioSpec	  spec;
@@ -292,18 +330,9 @@ int main(int argc, char** argv) {
 
 	FileStream_Destroy(cfgfs);
 
-	if((fs = FileStream_New(argv[2])) == NULL) {
+	if(openMidi(argv) != 0) {
 		GUSPatSynth_Destroy(gGUSPatSynth);
 
-		fprintf(stderr, "cannot open midi\n");
-		return 1;
-	}
-
-	if((ms = MidiStream_New(fs, callback)) == NULL) {
-		FileStream_Destroy(fs);
-		GUSPatSynth_Destroy(gGUSPatSynth);
-
-		fprintf(stderr, "cannot open midi\n");
 		return 1;
 	}
 
@@ -344,6 +373,7 @@ int main(int argc, char** argv) {
 	SDL_GetWindowSize(window, &gWinWidth, &gWinHeight);
 
 	SDL_GL_MakeCurrent(window, renderer);
+	SDL_GL_SetSwapInterval(0);
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -360,36 +390,45 @@ int main(int argc, char** argv) {
 		hsv[2] = 1;
 
 		hsv2rgb(hsv, gPiano[i].rgb);
+
+		gGetX[i]     = getX(i);
+		gGetWidth[i] = getWidth(i);
 	}
 
-	delta  = SDL_GetTicks();
-	gBegin = (double)delta / 1000;
+	delta = gBegin = SDL_GetTicks();
 
 	while(1) {
 		short	  buffer[BUFSZ * 2] = {0};
 		SDL_Event ev;
+		int	  dt;
 
 		while(SDL_PollEvent(&ev)) {
 			if(ev.type == SDL_QUIT) goto quit;
 		}
 
-		if((SDL_GetTicks() - delta) >= 1000 / 60) {
-			delta = SDL_GetTicks();
+		dt = SDL_GetTicks() - delta;
+		if(dt >= 1000 / 60) {
+			while(gMsVisual->currentSec < gMsAudio->currentSec + 1.0 / FACTOR) {
+				MidiStream_Advance(gMsVisual, (double)BUFSZ / 48000);
+			}
+
+			delta += dt;
 
 			glClearColor(0.25, 0.25, 0.25, 1);
 			glClear(GL_COLOR_BUFFER_BIT);
 
 			drawNotes();
+
 			drawPiano();
 
 			SDL_GL_SwapWindow(window);
 		}
 
-		for(i = 0; i < ms->nTracks && ms->tracks[i].finished; i++);
-		if(i == ms->nTracks) break;
+		for(i = 0; i < gMsAudio->nTracks && gMsAudio->tracks[i].finished; i++);
+		if(i == gMsAudio->nTracks) break;
 
 		while(SDL_GetQueuedAudioSize(audio) < BUFSZ * BUFFERS) {
-			MidiStream_Advance(ms, (double)BUFSZ / 48000);
+			MidiStream_Advance(gMsAudio, BUFSZ / 48000.0);
 
 			render(buffer, BUFSZ);
 			SDL_QueueAudio(audio, buffer, sizeof(buffer));
@@ -403,8 +442,7 @@ cleangl:;
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 cleanmidi:;
-	MidiStream_Destroy(ms);
-	FileStream_Destroy(fs);
+	closeMidi();
 	GUSPatSynth_Destroy(gGUSPatSynth);
 
 	return st;
