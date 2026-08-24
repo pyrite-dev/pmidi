@@ -214,6 +214,12 @@ static void loadSample(GUSSample* sample, FileStream* fs, int patchChannels, int
 	u8  = wave;
 	u16 = wave;
 
+	if(modes & 1) {
+		for(i = 0; i < waveSize; i += 2) {
+			u16[i / 2] = ((int)u8[i + 1] << 8) | u8[i + 0];
+		}
+	}
+
 	if(modes & 1) waveSize /= 2;
 	if(patchChannels == 2) waveSize /= 2;
 
