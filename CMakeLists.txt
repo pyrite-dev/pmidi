@@ -1,21 +1,34 @@
 cmake_minimum_required(VERSION 3.11)
 project(pmidi)
 
+file(GLOB LIBFILESTREAM_SOURCES filestream/*.c)
+add_library(filestream STATIC ${LIBFILESTREAM_SOURCES})
+target_include_directories(filestream PUBLIC filestream)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+	target_compile_definitions(filestream PRIVATE DEBUG)
+endif()
 
 file(GLOB LIBMIDI_SOURCES midi/*.c)
 add_library(midi STATIC ${LIBMIDI_SOURCES})
 target_include_directories(midi PUBLIC midi)
-
+target_link_libraries(midi PUBLIC filestream)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	target_compile_definitions(midi PRIVATE DEBUG)
 endif()
 
+file(GLOB LIBGUSPAT_SOURCES guspat/*.c)
+add_library(guspat STATIC ${LIBGUSPAT_SOURCES})
+target_include_directories(guspat PUBLIC guspat)
+target_link_libraries(guspat PUBLIC filestream)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+	target_compile_definitions(guspat PRIVATE DEBUG)
+endif()
 
 find_package(SDL2 REQUIRED)
 
 file(GLOB PMIDI_SOURCES src/*.c)
 add_executable(pmidi ${PMIDI_SOURCES})
-target_link_libraries(pmidi PRIVATE midi SDL2::SDL2)
+target_link_libraries(pmidi PRIVATE midi guspat SDL2::SDL2)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Windows")
 	target_link_libraries(pmidi PRIVATE m)
