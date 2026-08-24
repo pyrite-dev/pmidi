@@ -64,6 +64,9 @@ struct GUSPatSynth {
 
 	GUSProgram programs[128 * 2]; /* OR 0x80 to make it drum program */
 	GUSChannel channels[GUSPATSYNTH_CHANNELS];
+
+	float* tempBuffer;
+	int    nTempBuffer;
 };
 
 GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate);

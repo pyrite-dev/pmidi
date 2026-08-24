@@ -412,14 +412,22 @@ void GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int dru
 }
 
 void GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames) {
-	float* f = calloc(frames * 2, sizeof(*f));
-	int    i;
+	int i;
 
-	GUSPatSynth_RenderFloat(self, f, frames);
+alloc_again:;
+	if(self->tempBuffer == NULL) {
+		self->tempBuffer  = calloc(frames * 2, sizeof(*self->tempBuffer));
+		self->nTempBuffer = frames;
+	} else if(self->nTempBuffer < frames) {
+		free(self->tempBuffer);
+		self->tempBuffer = NULL;
 
-	for(i = 0; i < 2 * frames; i++) output[i] = f[i] * 32767;
+		goto alloc_again;
+	}
 
-	free(f);
+	GUSPatSynth_RenderFloat(self, self->tempBuffer, frames);
+
+	for(i = 0; i < 2 * frames; i++) output[i] = self->tempBuffer[i] * 32767;
 }
 
 void GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames) {
@@ -473,6 +481,8 @@ void GUSPatSynth_Destroy(GUSPatSynth* self) {
 	for(i = 0; i < 2; i++) {
 		for(j = 0; j < 128; j++) GUSPatSynth_Unload(self, j, i);
 	}
+
+	if(self->tempBuffer != NULL) free(self->tempBuffer);
 
 	free(self);
 }
