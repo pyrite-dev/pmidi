@@ -13,7 +13,7 @@ typedef struct GUSVoice	   GUSVoice;
 typedef struct GUSChannel  GUSChannel;
 typedef struct GUSPatSynth GUSPatSynth;
 
-#define GUSPATSYNTH_VOICES 32
+#define GUSPATSYNTH_VOICES 128
 #define GUSPATSYNTH_CHANNELS 128
 
 struct GUSSample {
@@ -43,12 +43,12 @@ struct GUSProgram {
 
 struct GUSVoice {
 	int key;
-	int velocity;
 
 	GUSSample* sample;
+	float	   volume;
 
-	double x;
-	double ratio;
+	unsigned int x;	   /* 16.16 */
+	unsigned int step; /* 16.16 */
 
 	int used;
 };

@@ -6,12 +6,11 @@
 
 #define BUFSZ 800
 #define BUFFERS 40
-#define VOICES 256
-//GUSPATSYNTH_VOICES
+#define VOICES GUSPATSYNTH_VOICES
 
 typedef struct voice   voice_t;
 typedef struct channel channel_t;
-typedef struct piano piano_t;
+typedef struct piano   piano_t;
 
 struct voice {
 	int key;
@@ -35,7 +34,7 @@ struct piano {
 static GUSPatSynth* gGUSPatSynth;
 static int	    gWinWidth, gWinHeight;
 static double	    gBegin;
-static piano_t      gPiano[96];
+static piano_t	    gPiano[96];
 static channel_t    gChannels[128] = {0};
 
 /* taken from stackoverflow */
@@ -94,9 +93,10 @@ static void hsv2rgb(double* in, double* out) {
 
 static void callback(MidiStream* ms, const MidiEvent* event) {
 	if(event->type == MidiEventNote) {
-		int i;
+		int	   i;
 		channel_t* c = &gChannels[event->note.channel];
 
+#if 0
 		if(event->note.velocity == 0) {
 			for(i = 0; i < VOICES; i++) {
 				voice_t* v = &c->voices[i];
@@ -122,6 +122,7 @@ static void callback(MidiStream* ms, const MidiEvent* event) {
 				c->voices[i] = v;
 			}
 		}
+#endif
 
 		GUSPatSynth_Note(gGUSPatSynth, event->note.channel, event->note.key, event->note.velocity);
 	} else if(event->type == MidiEventProgramChange) {
@@ -247,13 +248,13 @@ static void drawNotes(void) {
 				glVertex2f(x1, y2);
 				glEnd();
 
-				if(gPiano[v->key].playing == 0 && y2 >= (gWinHeight - WhiteHeight)){
+				if(gPiano[v->key].playing == 0 && y2 >= (gWinHeight - WhiteHeight)) {
 					gPiano[v->key].playing = 1;
 				}
 
 				if(y1 >= gWinHeight) {
 					gPiano[v->key].playing = 0;
-					c->voices[j].used = 0;
+					c->voices[j].used      = 0;
 				}
 			}
 		}
@@ -270,7 +271,7 @@ int main(int argc, char** argv) {
 	SDL_AudioDeviceID audio;
 	int		  st = 0;
 	long		  delta;
-	int	  i;
+	int		  i;
 
 	if(argc != 3) {
 		fprintf(stderr, "Usage: %s cfg midi\n", argv[0]);
@@ -351,7 +352,7 @@ int main(int argc, char** argv) {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	for(i = 0; i < 96; i++){
+	for(i = 0; i < 96; i++) {
 		double hsv[3];
 
 		hsv[0] = i / 96.0 * 360;

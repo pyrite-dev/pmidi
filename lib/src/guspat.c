@@ -383,11 +383,11 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 		if(i < GUSPATSYNTH_VOICES) {
 			GUSProgram* prog = &self->programs[self->channels[channel].program];
 
-			voice->key	= key;
-			voice->velocity = velocity;
-			voice->sample	= NULL;
-			voice->x	= 0;
-			voice->ratio	= 0;
+			voice->key    = key;
+			voice->sample = NULL;
+			voice->x      = 0;
+			voice->step   = 0;
+			voice->volume = (float)velocity / 127 / 4;
 
 			if(prog->used) {
 				int freq = keyFrequency(key);
@@ -397,7 +397,7 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 
 					if(sample->lowFrequency <= (freq + TOL) && freq <= (sample->highFrequency + TOL)) {
 						voice->sample = sample;
-						voice->ratio  = (double)freq / sample->rootFrequency;
+						voice->step   = (unsigned int)((double)freq / sample->rootFrequency * 65536);
 					}
 				}
 			}
@@ -431,26 +431,28 @@ void GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames) {
 		GUSChannel* channel = &self->channels[i];
 
 		for(j = 0; j < GUSPATSYNTH_VOICES; j++) {
-			GUSVoice* voice = &channel->voices[j];
+			GUSVoice*  voice  = &channel->voices[j];
+			GUSSample* sample = voice->sample;
 
 			if(!voice->used) continue;
 
 			for(k = 0; k < frames; k++) {
-				float* wave = &voice->sample->wave[((int)voice->x) * 2];
+				int    x    = voice->x >> 16;
+				float* wave = &sample->wave[x * 2];
 
-				output[k * 2 + 0] += wave[0] * voice->velocity / 127 / 4;
-				output[k * 2 + 1] += wave[1] * voice->velocity / 127 / 4;
+				output[k * 2 + 0] += wave[0] * voice->volume;
+				output[k * 2 + 1] += wave[1] * voice->volume;
 
-				voice->x += voice->ratio;
+				voice->x += voice->step;
 
 				/* TODO: implement more than forward loop */
-				if(voice->sample->loop && !voice->sample->loopBi && !voice->sample->loopBackward && voice->x >= voice->sample->endLoop) {
-					voice->x = voice->sample->startLoop + (voice->x - voice->sample->endLoop);
-				} else if(!voice->sample->loop && voice->x >= voice->sample->nWaveFrames) {
+				if(sample->loop && !sample->loopBi && !sample->loopBackward && x >= sample->endLoop) {
+					voice->x = (sample->startLoop + (x - sample->endLoop)) << 16;
+				} else if(!sample->loop && x >= sample->nWaveFrames) {
 					voice->used = 0;
 				}
 
-				if(voice->x >= voice->sample->nWaveFrames) voice->x = voice->sample->nWaveFrames - 1;
+				if(x >= sample->nWaveFrames) voice->x = (sample->nWaveFrames - 1) << 16;
 			}
 		}
 	}
