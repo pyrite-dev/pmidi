@@ -367,8 +367,6 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 			GUSVoice* voice = &self->channels[channel].voices[i];
 			if(voice->key == key) {
 				voice->used = 0;
-
-				break;
 			}
 		}
 	} else {
