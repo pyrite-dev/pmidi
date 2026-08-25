@@ -95,6 +95,7 @@ FileStream* FileStream_New(const char* path) {
 	self->fp = fp;
 #endif
 
+	self->base.New	 = FileStream_New;
 	self->base.Read	 = FileStream_ReadImpl;
 	self->base.Seek	 = FileStream_SeekImpl;
 	self->base.Tell	 = FileStream_TellImpl;

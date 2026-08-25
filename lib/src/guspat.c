@@ -115,7 +115,7 @@ GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate) {
 							strcpy(patchpath, arg1);
 							strcat(patchpath, ".pat");
 
-							if((patch = FileStream_New(arg1)) != NULL || (patch = FileStream_New(patchpath)) != NULL) {
+							if((patch = fs->New(arg1)) != NULL || (patch = fs->New(patchpath)) != NULL) {
 								if(!GUSPatSynth_Load(self, num & 0xff, program, num & (1 << 8), patch)) {
 									FileStream_Destroy(patch);
 									free(patchpath);
