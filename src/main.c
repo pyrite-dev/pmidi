@@ -10,7 +10,7 @@
 #include <unistd.h>
 #endif
 
-#define BUFSZ 240
+#define BUFSZ 800
 
 typedef struct buffer buffer_t;
 
@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	if((cfgfs = FileStream_New(argv[1])) == NULL) {
+	if((cfgfs = FileStream_New(argv[1], NULL)) == NULL) {
 		fprintf(stderr, "cannot open cfg\n");
 		return 1;
 	}
@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
 
 	FileStream_Destroy(cfgfs);
 
-	if((fs = FileStream_New(argv[2])) == NULL) {
+	if((fs = FileStream_New(argv[2], NULL)) == NULL) {
 		GUSPatSynth_Destroy(gGUSPatSynth);
 
 		fprintf(stderr, "cannot open midi\n");

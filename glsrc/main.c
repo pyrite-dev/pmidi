@@ -288,7 +288,7 @@ static int openMidi(char** argv) {
 	gFsAudio = gFsVisual = NULL;
 	gMsAudio = gMsVisual = NULL;
 
-	if((gFsAudio = FileStream_New(argv[2])) == NULL) {
+	if((gFsAudio = FileStream_New(argv[2], NULL)) == NULL) {
 		fprintf(stderr, "cannot open midi\n");
 		return 1;
 	}
@@ -298,7 +298,7 @@ static int openMidi(char** argv) {
 		return 1;
 	}
 
-	gFsVisual = FileStream_New(argv[2]);
+	gFsVisual = FileStream_New(argv[2], NULL);
 	gMsVisual = MidiStream_New(gFsVisual, visualCallback);
 
 	return 0;
@@ -326,7 +326,7 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	if((cfgfs = FileStream_New(argv[1])) == NULL) {
+	if((cfgfs = FileStream_New(argv[1], NULL)) == NULL) {
 		fprintf(stderr, "cannot open cfg\n");
 		return 1;
 	}

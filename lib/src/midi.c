@@ -37,7 +37,7 @@ static __inline unsigned int readDelta(FileStream* fs) {
 	unsigned int  r = 0;
 
 	do {
-		FileStream_Read(fs, &n, 1);
+		if(FileStream_Read(fs, &n, 1) < 1) break;
 
 		r = r << 7;
 		r = r | (n & 0x7f);
@@ -177,7 +177,8 @@ static void readEvent(MidiStream* self, MidiTrack* track) {
 			unsigned int len = readDelta(self->fs);
 
 			FileStream_Seek(self->fs, FileStream_Tell(self->fs) + len);
-		} break;
+			break;
+		}
 
 		case 0xff:
 		{
@@ -203,7 +204,8 @@ static void readEvent(MidiStream* self, MidiTrack* track) {
 				FileStream_Seek(self->fs, FileStream_Tell(self->fs) + len);
 				break;
 			}
-		} break;
+			break;
+		}
 		}
 		break;
 	}
@@ -260,6 +262,11 @@ void MidiStream_Advance(MidiStream* self, double sec) {
 
 			FileStream_Seek(self->fs, self->tracks[i].filePos);
 			readEvent(self, &self->tracks[i]);
+
+			if(FileStream_Tell(self->fs) - self->tracks[i].fileStart >= self->tracks[i].dataSize){
+				self->tracks[i].finished = 1;
+				continue;
+			}
 
 			self->tracks[i].nextTick += readDelta(self->fs);
 			self->tracks[i].filePos = FileStream_Tell(self->fs);

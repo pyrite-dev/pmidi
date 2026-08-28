@@ -110,14 +110,38 @@ GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate) {
 
 						if(0 <= program && program < 128) {
 							FileStream* patch;
-							char*	    patchpath = malloc(strlen(arg1) + 4 + 1);
+							int	    p2l	       = strlen(fs->path == NULL ? "" : fs->path) + 10 + strlen(arg1) + 4 + 1;
+							char*	    patchpath  = malloc(strlen(arg1) + 4 + 1);
+							char*	    patchpath2 = malloc(p2l);
+							char*	    patchpath3 = malloc(p2l);
 
 							strcpy(patchpath, arg1);
 							strcat(patchpath, ".pat");
 
-							if((patch = fs->New(arg1)) != NULL || (patch = fs->New(patchpath)) != NULL) {
+							if(fs->path == NULL) {
+								patchpath2[0] = patchpath3[0] = 0;
+							} else {
+								char* n;
+
+								strcpy(patchpath2, fs->path);
+								if((n = strrchr(patchpath2, '/')) == NULL) {
+									strcpy(patchpath2, "./");
+								} else {
+									n[0] = 0;
+									for(n--; n != patchpath2 && *n == '/' && *n == '\\'; n--) n[0] = 0;
+									strcat(patchpath2, "/");
+								}
+								strcat(patchpath2, arg1);
+
+								strcpy(patchpath3, patchpath2);
+								strcat(patchpath3, ".pat");
+							}
+
+							if((patch = fs->New(arg1, fs->newArg)) != NULL || (patch = fs->New(patchpath, fs->newArg)) != NULL || (patch = fs->New(patchpath2, fs->newArg)) != NULL || (patch = fs->New(patchpath3, fs->newArg)) != NULL) {
 								if(!GUSPatSynth_Load(self, num & 0xff, program, num & (1 << 8), patch)) {
 									FileStream_Destroy(patch);
+									free(patchpath3);
+									free(patchpath2);
 									free(patchpath);
 									GUSPatSynth_Destroy(self);
 
@@ -125,8 +149,12 @@ GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate) {
 								}
 
 								FileStream_Destroy(patch);
+								free(patchpath3);
+								free(patchpath2);
 								free(patchpath);
 							} else {
+								free(patchpath3);
+								free(patchpath2);
 								free(patchpath);
 								GUSPatSynth_Destroy(self);
 

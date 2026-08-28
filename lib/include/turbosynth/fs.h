@@ -20,14 +20,17 @@ typedef FileStreamBigUInt FileStreamBigUInt; /* :( */
 typedef struct FileStream FileStream;
 
 struct FileStream {
-	FileStream* (*New)(const char* path);
+	FileStream* (*New)(const char* path, void* arg);
 	int (*Read)(FileStream* self, void* buf, int size);
 	void (*Seek)(FileStream* self, FileStreamBigUInt pos);
 	FileStreamBigUInt (*Tell)(FileStream* self);
 	void (*Close)(FileStream* self);
+
+	char* path;
+	void* newArg;
 };
 
-FileStream* FileStream_New(const char* path);
+FileStream* FileStream_New(const char* path, void* arg);
 #define FileStream_Read(self, buf, size) (self)->Read((self), (buf), (size))
 #define FileStream_Seek(self, pos) (self)->Seek((self), (pos))
 #define FileStream_Tell(self) (self)->Tell((self))

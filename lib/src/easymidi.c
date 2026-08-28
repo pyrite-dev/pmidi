@@ -4,7 +4,7 @@ EasyMidi* EasyMidi_New(const char* cfg, int rate) {
 	FileStream* fs;
 	EasyMidi*   self;
 
-	if((fs = FileStream_New(cfg)) == NULL) return NULL;
+	if((fs = FileStream_New(cfg, NULL)) == NULL) return NULL;
 
 	self = EasyMidi_New2(fs, rate);
 
@@ -51,7 +51,7 @@ int EasyMidi_Load(EasyMidi* self, const char* midi) {
 	FileStream* fs;
 	int	    s;
 
-	if((fs = FileStream_New(midi)) == NULL) return 0;
+	if((fs = FileStream_New(midi, NULL)) == NULL) return 0;
 
 	s = EasyMidi_Load2(self, fs);
 
