@@ -477,8 +477,18 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 
 		if(i < GUSPATSYNTH_VOICES) {
 			int	       drum = self->channels[channel].program >= 0x80;
-			GUSProgramSet* ps   = getProgramSet(self, self->channels[channel].bank);
-			GUSProgram*    prog = &(*ps)[drum ? (0x80 | key) : self->channels[channel].program];
+			int	       bank = self->channels[channel].bank;
+			GUSProgramSet* ps;
+			GUSProgram*    prog;
+
+		retry:;
+			ps   = getProgramSet(self, bank);
+			prog = &(*ps)[drum ? (0x80 | key) : self->channels[channel].program];
+
+			if(bank != 0 && !prog->used) {
+				bank = 0;
+				goto retry;
+			}
 
 			voice->key    = key;
 			voice->sample = NULL;
