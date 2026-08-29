@@ -3,6 +3,7 @@
 		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<title>MIDI Player</title>
 		<script src="turbosynthwasm.js"></script>
+		<script src="audioplayer.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 		<script>
 var TurboSynth;
@@ -17,7 +18,6 @@ var EasyMidi_BufferPointer;
 var EasyMidi_Buffer;
 var defaultMidi;
 
-const frames = 480;
 var audioContext;
 
 var paused = false;
@@ -70,50 +70,25 @@ function play(){
 	}
 
 	if(!audioContext){
-		let sources = [];
-		let samples = 0;
-
 		audioContext = new (window.AudioContext || window.webkitAudioContext)();
-		const baseTime = audioContext.currentTime;
 
 		audioContext.resume();
 
-		function read(){
-			const audioBuffer = audioContext.createBuffer(2, frames, 44100);
+		const player = new AudioPlayer(audioContext, 44100);
+		
+		player.onbuffer = function(audioBuffer, frames){
 			const lChannelData = audioBuffer.getChannelData(0);
 			const rChannelData = audioBuffer.getChannelData(1);
 
-			if(!paused){
-				EasyMidi_RenderFloat(EasyMidi, EasyMidi_BufferPointer, frames);
+			EasyMidi_RenderFloat(EasyMidi, EasyMidi_BufferPointer, frames);
 
-				for(let i = 0; i < frames; i++){
-					lChannelData[i] = EasyMidi_Buffer[2 * i + 0];
-					rChannelData[i] = EasyMidi_Buffer[2 * i + 1];
-				}
+			for(let i = 0; i < frames; i++){
+				lChannelData[i] = EasyMidi_Buffer[2 * i + 0];
+				rChannelData[i] = EasyMidi_Buffer[2 * i + 1];
 			}
+		};
 
-			const currentSource = audioContext.createBufferSource();
-			currentSource.buffer = audioBuffer;
-			currentSource.connect(audioContext.destination);
-
-			currentSource.onended = function() {
-				sources = sources.filter((x)=>x != currentSource);
-
-				for(let i = sources.length; i < 5; i++) read();
-			}
-
-			sources.push(currentSource);
-
-			currentSource.start(baseTime + samples / 44100);
-
-			samples += frames;
-		}
-
-		read();
-		read();
-		read();
-		read();
-		read();
+		player.resume();
 	}
 
 	if(file.files[0]){
