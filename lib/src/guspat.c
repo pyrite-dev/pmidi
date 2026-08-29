@@ -489,7 +489,6 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 			if(prog->used) {
 				int freq = keyFrequency(key);
 
-				printf("!\n");
 				for(i = 0; i < prog->nSamples; i++) {
 					GUSSample* sample = &prog->samples[i];
 
