@@ -572,6 +572,8 @@ void GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames) {
 }
 
 void GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames) {
+	memset(output, 0, frames * 2 * sizeof(*output));
+
 	RENDER({
 #ifdef MONAURAL
 		output[k * 2 + 0] += (float)wave[0] / 32767 * (voice->volume / 32768.0);
@@ -590,6 +592,10 @@ void GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames) {
 
 		output[i] = n;
 	}
+}
+
+void GUSPatSynth_Reset(GUSPatSynth* self) {
+	memset(self->channels, 0, sizeof(self->channels));
 }
 
 void GUSPatSynth_Destroy(GUSPatSynth* self) {

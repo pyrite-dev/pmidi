@@ -90,6 +90,7 @@ void	     GUSPatSynth_SetBankMSB(GUSPatSynth* self, int channel, int bank);
 void	     GUSPatSynth_SetBankLSB(GUSPatSynth* self, int channel, int bank);
 void	     GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames);
 void	     GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames);
+void	     GUSPatSynth_Reset(GUSPatSynth* self);
 void	     GUSPatSynth_Destroy(GUSPatSynth* self);
 
 #endif

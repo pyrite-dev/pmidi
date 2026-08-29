@@ -28,6 +28,7 @@ int	  EasyMidi_Load2(EasyMidi* self, FileStream* midi);
 int	  EasyMidi_IsFinished(EasyMidi* self);
 void	  EasyMidi_RenderShort(EasyMidi* self, short* frames, int nFrames);
 void	  EasyMidi_RenderFloat(EasyMidi* self, float* frames, int nFrames);
+void	  EasyMidi_Reset(EasyMidi* self);
 void	  EasyMidi_Destroy(EasyMidi* self);
 
 #endif

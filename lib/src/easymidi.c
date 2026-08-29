@@ -89,17 +89,17 @@ int EasyMidi_IsFinished(EasyMidi* self) {
 }
 
 void EasyMidi_RenderShort(EasyMidi* self, short* frames, int nFrames) {
-	if(self->ms == NULL) return;
-
-	MidiStream_Advance(self->ms, (double)nFrames / self->rate);
+	if(self->ms != NULL) MidiStream_Advance(self->ms, (double)nFrames / self->rate);
 	GUSPatSynth_RenderShort(self->synth, frames, nFrames);
 }
 
 void EasyMidi_RenderFloat(EasyMidi* self, float* frames, int nFrames) {
-	if(self->ms == NULL) return;
-
-	MidiStream_Advance(self->ms, (double)nFrames / self->rate);
+	if(self->ms != NULL) MidiStream_Advance(self->ms, (double)nFrames / self->rate);
 	GUSPatSynth_RenderFloat(self->synth, frames, nFrames);
+}
+
+void EasyMidi_Reset(EasyMidi* self) {
+	GUSPatSynth_Reset(self->synth);
 }
 
 void EasyMidi_Destroy(EasyMidi* self) {
