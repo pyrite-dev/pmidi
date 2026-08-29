@@ -92,6 +92,10 @@ struct GUSPatSynth {
 	GUSChannel channels[GUSPATSYNTH_CHANNELS];
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate);
 int	     GUSPatSynth_Load(GUSPatSynth* self, int bank, int program, int drum, FileStream* fs); /* true if success */
 void	     GUSPatSynth_Unload(GUSPatSynth* self, int bank, int program, int drum);
@@ -105,5 +109,9 @@ void	     GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames);
 void	     GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames);
 void	     GUSPatSynth_Reset(GUSPatSynth* self);
 void	     GUSPatSynth_Destroy(GUSPatSynth* self);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

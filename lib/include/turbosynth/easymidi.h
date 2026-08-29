@@ -20,6 +20,10 @@ struct EasyMidi {
 	GUSPatSynth* synth;
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 EasyMidi* EasyMidi_New(const char* cfg, int rate);
 EasyMidi* EasyMidi_New2(FileStream* cfg, int rate);
 void	  EasyMidi_MidiCallback(MidiStream* ms, const MidiEvent* event); /* you may use this with self->user pointed at GUSPatSynth* */
@@ -30,5 +34,9 @@ void	  EasyMidi_RenderShort(EasyMidi* self, short* frames, int nFrames);
 void	  EasyMidi_RenderFloat(EasyMidi* self, float* frames, int nFrames);
 void	  EasyMidi_Reset(EasyMidi* self);
 void	  EasyMidi_Destroy(EasyMidi* self);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
