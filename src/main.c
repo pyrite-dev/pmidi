@@ -128,6 +128,8 @@ int main(int argc, char** argv) {
 #endif
 	}
 
+	while(bufferSize() > 0);
+
 quit:;
 	ma_mutex_uninit(&gBufferMutex);
 	ma_device_uninit(&device);

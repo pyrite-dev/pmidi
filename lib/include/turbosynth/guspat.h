@@ -33,6 +33,9 @@ struct GUSSample {
 	int loop;	  /* loop or not */
 	int loopBi;	  /* 0 = uni, 1 = bi */
 	int loopBackward; /* 0 = forward, 1 = backward */
+
+	int envRate[6];
+	int envOffset[6];
 };
 
 struct GUSProgram {
@@ -49,7 +52,8 @@ struct GUSVoice {
 	int key;
 
 	GUSSample* sample;
-	int	   volume; /* 15.16 */
+	int	   volume;	  /* 16.16 */
+	int	   currentVolume; /* 16.16 */
 	int	   loop;
 
 	unsigned int x;	       /* 16.16 */

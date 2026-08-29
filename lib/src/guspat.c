@@ -12,7 +12,7 @@
 #define CHANNELS 2
 #endif
 
-static int freqTable[128] = {
+static const int freqTable[128] = {
     8176, 8662, 9177, 9723,
     10301, 10913, 11562, 12250,
     12978, 13750, 14568, 15434,
@@ -229,6 +229,8 @@ static void loadSample(GUSSample* sample, FileStream* fs, int patchChannels, int
 	unsigned char*	u8;
 	short*		s16;
 	unsigned short* u16;
+	unsigned char	envRate[6];
+	unsigned char	envOffset[6];
 
 	FileStream_Seek(fs, FileStream_Tell(fs) + 7); /* wave name */
 	read8(fs);				      /* fractions */
@@ -241,14 +243,14 @@ static void loadSample(GUSSample* sample, FileStream* fs, int patchChannels, int
 	sample->rootFrequency = read32(fs);
 	read16(fs); /* tune */
 	balance = ((float)read8(fs) - 128) / 128;
-	FileStream_Seek(fs, FileStream_Tell(fs) + 6); /* envelope rate */
-	FileStream_Seek(fs, FileStream_Tell(fs) + 6); /* envelope offset */
-	read8(fs);				      /* tremolo sweep */
-	read8(fs);				      /* tremolo rate */
-	read8(fs);				      /* tremolo depth */
-	read8(fs);				      /* vibrato sweep */
-	read8(fs);				      /* vibrato rate */
-	read8(fs);				      /* vibrato depth */
+	FileStream_Read(fs, envRate, 6);
+	FileStream_Read(fs, envOffset, 6);
+	read8(fs); /* tremolo sweep */
+	read8(fs); /* tremolo rate */
+	read8(fs); /* tremolo depth */
+	read8(fs); /* vibrato sweep */
+	read8(fs); /* vibrato rate */
+	read8(fs); /* vibrato depth */
 	modes = read8(fs);
 	read16(fs);				       /* scale frequency */
 	read16(fs);				       /* scale factor */
@@ -490,11 +492,12 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 				goto retry;
 			}
 
-			voice->key    = key;
-			voice->sample = NULL;
-			voice->x      = 0;
-			voice->step   = 0;
-			voice->volume = (float)velocity / 127 / 4 * 32768;
+			voice->key	     = key;
+			voice->sample	     = NULL;
+			voice->x	     = 0;
+			voice->step	     = 0;
+			voice->volume	     = (float)velocity / 127 / 4 * 32768;
+			voice->currentVolume = 1.0 * 32768;
 
 			if(prog->used) {
 				int freq = keyFrequency(key);
@@ -593,11 +596,11 @@ void GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames) {
 
 	RENDER({
 #ifdef MONAURAL
-		mix[k * 2 + 0] += ((int)wave[0] * voice->volume) >> 16;
-		mix[k * 2 + 1] += ((int)wave[0] * voice->volume) >> 16;
+		mix[k * 2 + 0] += ((((int)wave[0] * voice->volume) >> 16) * voice->currentVolume) >> 16;
+		mix[k * 2 + 1] += ((((int)wave[0] * voice->volume) >> 16) * voice->currentVolume) >> 16;
 #else
-		mix[k * 2 + 0] += ((int)wave[0] * voice->volume) >> 16;
-		mix[k * 2 + 1] += ((int)wave[1] * voice->volume) >> 16;
+		mix[k * 2 + 0] += ((((int)wave[0] * voice->volume) >> 16) * voice->currentVolume) >> 16;
+		mix[k * 2 + 1] += ((((int)wave[1] * voice->volume) >> 16) * voice->currentVolume) >> 16;
 #endif
 	});
 
@@ -618,11 +621,11 @@ void GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames) {
 
 	RENDER({
 #ifdef MONAURAL
-		output[k * 2 + 0] += (float)wave[0] / 32767 * (voice->volume / 32768.0);
-		output[k * 2 + 1] += (float)wave[0] / 32767 * (voice->volume / 32768.0);
+		output[k * 2 + 0] += (float)wave[0] / 32767 * (voice->volume / 32768.0) * (voice->currentVolume / 32768.0);
+		output[k * 2 + 1] += (float)wave[0] / 32767 * (voice->volume / 32768.0) * (voice->currentVolume / 32768.0);
 #else
-		output[k * 2 + 0] += (float)wave[0] / 32767 * (voice->volume / 32768.0);
-		output[k * 2 + 1] += (float)wave[1] / 32767 * (voice->volume / 32768.0);
+		output[k * 2 + 0] += (float)wave[0] / 32767 * (voice->volume / 32768.0) * (voice->currentVolume / 32768.0);
+		output[k * 2 + 1] += (float)wave[1] / 32767 * (voice->volume / 32768.0) * (voice->currentVolume / 32768.0);
 #endif
 	});
 
