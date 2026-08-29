@@ -272,6 +272,14 @@ static void loadSample(GUSSample* sample, FileStream* fs, int patchChannels, int
 	sample->endLoop	  = sample->endLoop * rate / sampleRate;
 #endif
 
+	for(i = 0; i < 6; i++) {
+		sample->envIncrement[i] = ((unsigned int)(envRate[i] & 0x3f) << 16) / 4095;
+		sample->envOffset[i]	= ((unsigned int)envOffset[i] << 16) / 255;
+	}
+
+	sample->envEnable = (modes & (1 << 6)) ? 1 : 0;
+	sample->sustain	  = (modes & (1 << 5)) ? 1 : 0;
+
 #ifdef DEBUG
 	fprintf(stderr, "new sample, wave size is %d, start loop is %d, end loop is %d, sample rate is %d, low freq is %d, high freq is %d, root freq is %d\n", waveSize, sample->startLoop, sample->endLoop, sampleRate, sample->lowFrequency, sample->highFrequency, sample->rootFrequency);
 #endif
@@ -468,8 +476,15 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 	if(velocity == 0) {
 		for(i = 0; i < GUSPATSYNTH_VOICES; i++) {
 			GUSVoice* voice = &self->channels[channel].voices[i];
+			if(!voice->used || voice->released) continue;
+
 			if(voice->key == key) {
-				voice->used = 0;
+				if(voice->sample->envEnable) {
+					voice->released = 1;
+				} else {
+					voice->used = 0;
+				}
+				voice->envIndex = 2;
 			}
 		}
 	} else {
@@ -492,12 +507,13 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 				goto retry;
 			}
 
-			voice->key	     = key;
-			voice->sample	     = NULL;
-			voice->x	     = 0;
-			voice->step	     = 0;
-			voice->volume	     = (float)velocity / 127 / 4 * 32768;
-			voice->currentVolume = 1.0 * 32768;
+			voice->key	= key;
+			voice->sample	= NULL;
+			voice->x	= 0;
+			voice->step	= 0;
+			voice->volume	= (float)velocity / 127 / 4 * 32768;
+			voice->envIndex = 0;
+			voice->released = 0;
 
 			if(prog->used) {
 				int freq = keyFrequency(key);
@@ -506,16 +522,19 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 					GUSSample* sample = &prog->samples[i];
 
 					if(drum || (sample->lowFrequency <= (freq + TOL) && freq <= (sample->highFrequency + TOL))) {
-						voice->sample	= sample;
-						voice->baseStep = (unsigned int)((double)(drum ? sample->rootFrequency : freq) / sample->rootFrequency * sample->ratio * 65536);
-						voice->loop	= sample->loop && !sample->loopBi && !sample->loopBackward;
+						voice->sample	     = sample;
+						voice->baseStep	     = (unsigned int)((double)(drum ? sample->rootFrequency : freq) / sample->rootFrequency * sample->ratio * 65536);
+						voice->loop	     = sample->loop && !sample->loopBi && !sample->loopBackward;
+						voice->currentVolume = sample->envEnable ? sample->envOffset[0] : 0x10000;
 
 						voice->step = voice->baseStep * self->channels[channel].pitchRatio;
 					}
 				}
 			}
 
-			if(voice->sample != NULL) voice->used = 1;
+			if(voice->sample != NULL) {
+				voice->used = 1;
+			}
 
 #ifdef DEBUG
 			if(!voice->sample) {
@@ -557,8 +576,36 @@ void GUSPatSynth_ChangePitchWheel(GUSPatSynth* self, int channel, double semiton
 	}
 }
 
+#define ENVELOPE \
+	{ \
+		int rel2 = voice->released && voice->envIndex == 2; \
+		int a	 = rel2 ? voice->currentVolume : sample->envOffset[voice->envIndex]; \
+		int b	 = rel2 ? sample->envOffset[3] : sample->envOffset[voice->envIndex + 1]; \
+\
+		if((a <= voice->currentVolume && voice->currentVolume <= b) || (b <= voice->currentVolume && voice->currentVolume <= a)) { \
+			if(a < b) { \
+				voice->currentVolume += sample->envIncrement[voice->envIndex]; \
+				if(voice->currentVolume >= b) { \
+					voice->currentVolume = b; \
+				} \
+			} else if(a > b) { \
+				voice->currentVolume -= sample->envIncrement[voice->envIndex]; \
+				if(voice->currentVolume <= b) { \
+					voice->currentVolume = b; \
+				} \
+			} else { \
+				voice->currentVolume = b; \
+			} \
+\
+			if(voice->currentVolume == b && (voice->released || !sample->sustain || voice->envIndex != 1)) voice->envIndex++; \
+			if(voice->envIndex == 5) { \
+				voice->used = 0; \
+			} \
+		} \
+	}
+
 #define RENDER(proc) \
-	int i, j, k; \
+	int i, j, k, l; \
 \
 	memset(output, 0, frames * 2 * sizeof(*output)); \
 \
@@ -586,6 +633,9 @@ void GUSPatSynth_ChangePitchWheel(GUSPatSynth* self, int channel, double semiton
 					voice->used = 0; \
 				} \
 \
+				if(voice->used && sample->envEnable) ENVELOPE; \
+\
+				if(!voice->used) break; \
 				if(x >= sample->nWaveFrames) voice->x = (sample->nWaveFrames - 1) << 16; \
 			} \
 		} \

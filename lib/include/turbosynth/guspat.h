@@ -34,8 +34,10 @@ struct GUSSample {
 	int loopBi;	  /* 0 = uni, 1 = bi */
 	int loopBackward; /* 0 = forward, 1 = backward */
 
-	int envRate[6];
-	int envOffset[6];
+	unsigned int envIncrement[6];
+	unsigned int envOffset[6];
+	int	     envEnable;
+	int	     sustain;
 };
 
 struct GUSProgram {
@@ -60,6 +62,9 @@ struct GUSVoice {
 	unsigned int step;     /* 16.16 */
 	unsigned int baseStep; /* 16.16 */
 
+	int envIndex;
+
+	int released;
 	int used;
 };
 
