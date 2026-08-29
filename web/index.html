@@ -20,6 +20,8 @@ var defaultMidi;
 const frames = 480;
 var audioContext;
 
+var paused = false;
+
 window.onload = async function(){
 	document.getElementById("play").disabled = true;
 
@@ -63,6 +65,8 @@ function play(){
 		EasyMidi_Reset(EasyMidi);
 		if(!EasyMidi_Load(EasyMidi, "input.mid")) return;	
 		console.log("midi loaded");
+
+		paused = false;
 	}
 
 	if(!audioContext){
@@ -79,11 +83,13 @@ function play(){
 			const lChannelData = audioBuffer.getChannelData(0);
 			const rChannelData = audioBuffer.getChannelData(1);
 
-			EasyMidi_RenderFloat(EasyMidi, EasyMidi_BufferPointer, frames);
+			if(!paused){
+				EasyMidi_RenderFloat(EasyMidi, EasyMidi_BufferPointer, frames);
 
-			for(let i = 0; i < frames; i++){
-				lChannelData[i] = EasyMidi_Buffer[2 * i + 0];
-				rChannelData[i] = EasyMidi_Buffer[2 * i + 1];
+				for(let i = 0; i < frames; i++){
+					lChannelData[i] = EasyMidi_Buffer[2 * i + 0];
+					rChannelData[i] = EasyMidi_Buffer[2 * i + 1];
+				}
 			}
 
 			const currentSource = audioContext.createBufferSource();
@@ -125,6 +131,10 @@ function play(){
 	}
 }
 
+function pause(){
+	paused = !paused;
+}
+
 setInterval(()=>{
 	if(audioContext && document.getElementById("loop").checked && EasyMidi_IsFinished(EasyMidi)){
 		play();
@@ -136,7 +146,7 @@ setInterval(()=>{
 		<h1>MIDI Player (Powered by <a href="https://forgejo.nishi.boats/pyrite-dev/pmidi">TurboSynth</a>)</h1>
 		<hr>
 		<p>
-			<input type="file" id="file" accept=".mid"> <input type="button" value="Play" onclick="play()" id="play">
+			<input type="file" id="file" accept=".mid"> <input type="button" value="Play" onclick="play()" id="play"> <input type="button" value="Pause" onclick="pause()">
 		</p>
 		<p>
 			<input type="checkbox" id="loop"> Loop?
