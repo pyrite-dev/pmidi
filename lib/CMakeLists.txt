@@ -22,6 +22,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
 		"-sEXPORTED_RUNTIME_METHODS=[\"cwrap\", \"ccall\", \"HEAPF32\", \"addFunction\", \"FS\"]"
 		"-sMODULARIZE=1"
 		"-sALLOW_TABLE_GROWTH=1"
+		"-sALLOW_MEMORY_GROWTH=1"
 		"-sSTACK_SIZE=1048576"
 		"-sFORCE_FILESYSTEM=1"
 		"-sEXPORT_NAME=TurboSynthWASM"
