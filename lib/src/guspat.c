@@ -12,7 +12,7 @@
 #define CHANNELS 2
 #endif
 
-static int freqTable[96] = {
+static int freqTable[128] = {
     8176, 8662, 9177, 9723,
     10301, 10913, 11562, 12250,
     12978, 13750, 14568, 15434,
@@ -43,7 +43,18 @@ static int freqTable[96] = {
 
     1046502, 1108731, 1174659, 1244508,
     1318510, 1396913, 1479978, 1567982,
-    1661219, 1760000, 1864655, 1975533};
+    1661219, 1760000, 1864655, 1975533,
+
+    2093005, 2217461, 2349318, 2489016,
+    2637020, 2793826, 2959955, 3135963,
+    3322438, 3520000, 3729310, 3951066,
+
+    4186009, 4434922, 4698636, 4978032,
+    5274041, 5587652, 5919911, 6271927,
+    6644875, 7040000, 7458620, 7902133,
+
+    8372018, 8869844, 9397273, 9956063,
+    10548082, 11175303, 11839822, 12543854};
 
 static __inline unsigned int read8(FileStream* fs) {
 	unsigned char n;
@@ -78,7 +89,7 @@ static __inline unsigned int read32(FileStream* fs) {
 }
 
 static unsigned int keyFrequency(int note) {
-	if(note < 0 || note >= 96) return 0;
+	if(note < 0 || note >= 128) return 0;
 
 	return freqTable[note];
 }
@@ -478,6 +489,7 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 			if(prog->used) {
 				int freq = keyFrequency(key);
 
+				printf("!\n");
 				for(i = 0; i < prog->nSamples; i++) {
 					GUSSample* sample = &prog->samples[i];
 
