@@ -69,7 +69,7 @@ function play(){
 		let sources = [];
 		let samples = 0;
 
-		audioContext = new AudioContext();
+		audioContext = new (window.AudioContext || window.webkitAudioContext)();
 		const baseTime = audioContext.currentTime;
 
 		audioContext.resume();
