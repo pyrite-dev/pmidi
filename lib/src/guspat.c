@@ -474,6 +474,16 @@ void GUSPatSynth_Unload(GUSPatSynth* self, int bank, int program, int drum) {
 	unloadPatch(&(*ps)[(drum ? 0x80 : 0) | program]);
 }
 
+#define NOTE_OFF(voice) \
+	{ \
+		if(voice->sample->envEnable) { \
+			voice->released = 1; \
+		} else { \
+			voice->used = 0; \
+		} \
+		voice->envIndex = 2; \
+	}
+
 void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 	int i;
 
@@ -483,12 +493,7 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 			if(!voice->used || voice->released) continue;
 
 			if(voice->key == key) {
-				if(voice->sample->envEnable) {
-					voice->released = 1;
-				} else {
-					voice->used = 0;
-				}
-				voice->envIndex = 2;
+				NOTE_OFF(voice);
 			}
 		}
 	} else {
@@ -549,11 +554,14 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 	}
 }
 
-void GUSPatSynth_NoteOff(GUSPatSynth* self, int key) {
+void GUSPatSynth_NoteOffAll(GUSPatSynth* self, int key) {
 	int i;
 
-	for(i = 0; i < GUSPATSYNTH_CHANNELS; i++) {
-		GUSPatSynth_Note(self, i, key, 0);
+	for(i = 0; i < GUSPATSYNTH_VOICES; i++) {
+		GUSVoice* voice = &self->channels[channel].voices[i];
+		if(!voice->used || voice->released) continue;
+
+		NOTE_OFF(voice);
 	}
 }
 
