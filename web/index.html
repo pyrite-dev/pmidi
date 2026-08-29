@@ -146,10 +146,13 @@ setInterval(()=>{
 		<h1>MIDI Player (Powered by <a href="https://forgejo.nishi.boats/pyrite-dev/pmidi">TurboSynth</a>)</h1>
 		<hr>
 		<p>
-			<input type="file" id="file" accept=".mid"> <input type="button" value="Play" onclick="play()" id="play"> <input type="button" value="Pause" onclick="pause()">
+			<input type="file" id="file" accept=".mid">
+			<input type="button" value="Play" onclick="play()" id="play">
+			<input type="button" value="Pause" onclick="pause()">
 		</p>
 		<p>
-			<input type="checkbox" id="loop"> Loop?
+			<input type="checkbox" name="loop" id="loop">
+			<label for="loop">Loop?</label>
 		</p>
 		<p>
 			If you don't select any files, default MIDI gets played...

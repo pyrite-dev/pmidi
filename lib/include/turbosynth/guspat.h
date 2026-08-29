@@ -71,7 +71,7 @@ struct GUSChannel {
 };
 
 struct GUSBank {
-	int	       indices[128];
+	int	       indices[128 * 128];
 	GUSProgramSet* sets;
 	int	       nSets;
 };
