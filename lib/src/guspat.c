@@ -202,6 +202,8 @@ GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate) {
 		}
 	}
 
+	GUSPatSynth_Reset(self);
+
 	return self;
 }
 
@@ -480,9 +482,11 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 					GUSSample* sample = &prog->samples[i];
 
 					if(drum || (sample->lowFrequency <= (freq + TOL) && freq <= (sample->highFrequency + TOL))) {
-						voice->sample = sample;
-						voice->step   = (unsigned int)((double)(drum ? sample->rootFrequency : freq) / sample->rootFrequency * sample->ratio * 65536);
-						voice->loop   = sample->loop && !sample->loopBi && !sample->loopBackward;
+						voice->sample	= sample;
+						voice->baseStep = (unsigned int)((double)(drum ? sample->rootFrequency : freq) / sample->rootFrequency * sample->ratio * 65536);
+						voice->loop	= sample->loop && !sample->loopBi && !sample->loopBackward;
+
+						voice->step = voice->baseStep * self->channels[channel].pitchRatio;
 					}
 				}
 			}
@@ -501,8 +505,6 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 void GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int drum) {
 	int bank = (self->channels[channel].bankMsb << 7) | self->channels[channel].bankLsb;
 
-	bank = 0;
-
 	GUSPatSynth_SetBank(self, channel, bank);
 	self->channels[channel].program = (drum ? 0x80 : 0) | (program & 0x7f);
 }
@@ -519,6 +521,16 @@ void GUSPatSynth_SetBankMSB(GUSPatSynth* self, int channel, int bank) {
 
 void GUSPatSynth_SetBankLSB(GUSPatSynth* self, int channel, int bank) {
 	self->channels[channel].bankLsb = bank & 0x7f;
+}
+
+void GUSPatSynth_ChangePitchWheel(GUSPatSynth* self, int channel, double semitone) {
+	int i;
+
+	self->channels[channel].pitchRatio = pow(2, semitone / 12);
+
+	for(i = 0; i < GUSPATSYNTH_VOICES; i++) {
+		self->channels[channel].voices[i].step = self->channels[channel].voices[i].baseStep * self->channels[channel].pitchRatio;
+	}
 }
 
 #define RENDER(proc) \
@@ -604,7 +616,13 @@ void GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames) {
 }
 
 void GUSPatSynth_Reset(GUSPatSynth* self) {
+	int i;
+
 	memset(self->channels, 0, sizeof(self->channels));
+
+	for(i = 0; i < GUSPATSYNTH_CHANNELS; i++) {
+		self->channels[i].pitchRatio = 1;
+	}
 }
 
 void GUSPatSynth_Destroy(GUSPatSynth* self) {

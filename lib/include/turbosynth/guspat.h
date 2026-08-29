@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 
 typedef struct GUSSample   GUSSample;
 typedef struct GUSProgram  GUSProgram;
@@ -51,8 +52,9 @@ struct GUSVoice {
 	int	   volume; /* 15.16 */
 	int	   loop;
 
-	unsigned int x;	   /* 16.16 */
-	unsigned int step; /* 16.16 */
+	unsigned int x;	       /* 16.16 */
+	unsigned int step;     /* 16.16 */
+	unsigned int baseStep; /* 16.16 */
 
 	int used;
 };
@@ -60,9 +62,10 @@ struct GUSVoice {
 struct GUSChannel {
 	int program; /* OR 0x80 to make it drum */
 
-	int bank;
-	int bankMsb;
-	int bankLsb;
+	int    bank;
+	int    bankMsb;
+	int    bankLsb;
+	double pitchRatio;
 
 	GUSVoice voices[GUSPATSYNTH_VOICES];
 };
@@ -88,6 +91,7 @@ void	     GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, in
 void	     GUSPatSynth_SetBank(GUSPatSynth* self, int channel, int bank); /* immedaite change; use SetBankMSB/SetBankLSB if you are passing MIDI messages */
 void	     GUSPatSynth_SetBankMSB(GUSPatSynth* self, int channel, int bank);
 void	     GUSPatSynth_SetBankLSB(GUSPatSynth* self, int channel, int bank);
+void	     GUSPatSynth_ChangePitchWheel(GUSPatSynth* self, int channel, double semitone);
 void	     GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames);
 void	     GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames);
 void	     GUSPatSynth_Reset(GUSPatSynth* self);

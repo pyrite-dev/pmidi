@@ -72,6 +72,8 @@ function play(){
 		audioContext = new AudioContext();
 		const baseTime = audioContext.currentTime;
 
+		audioContext.resume();
+
 		function read(){
 			const audioBuffer = audioContext.createBuffer(2, frames, 44100);
 			const lChannelData = audioBuffer.getChannelData(0);

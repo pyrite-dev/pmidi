@@ -164,10 +164,18 @@ static void readEvent(MidiStream* self, MidiTrack* track) {
 		break;
 
 	case 0xe0:
-		/* TODO */
-		read16(self->fs);
+	{
+		int bendl = read8(self->fs);
+		int bendm = read8(self->fs);
 
+		ev.type			     = MidiEventPitchWheelChange;
+		ev.pitchWheelChange.channel  = op & 0xf;
+		ev.pitchWheelChange.bend     = ((bendm << 7) | bendm) - 8192;
+		ev.pitchWheelChange.semitone = (double)ev.pitchWheelChange.bend / 8192 * 2;
+
+		self->callback(self, &ev);
 		break;
+	}
 
 	case 0xf0:
 		switch(op) {

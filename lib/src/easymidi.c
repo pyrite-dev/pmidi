@@ -44,6 +44,8 @@ void EasyMidi_MidiCallback(MidiStream* ms, const MidiEvent* event) {
 		if(synth->channels[event->programChange.channel].bankMsb == 120 || event->programChange.channel == 9) drum = 1;
 
 		GUSPatSynth_SetProgram(synth, event->programChange.channel, event->programChange.program, drum);
+	} else if(event->type == MidiEventPitchWheelChange) {
+		GUSPatSynth_ChangePitchWheel(synth, event->pitchWheelChange.channel, event->pitchWheelChange.semitone);
 	}
 }
 

@@ -1,5 +1,6 @@
 #include <turbosynth/midi.h>
 #include <turbosynth/guspat.h>
+#include <turbosynth/easymidi.h>
 
 #include <SDL.h>
 #include <SDL_opengl.h>
@@ -32,17 +33,15 @@ struct piano {
 	int playing;
 };
 
-static GUSPatSynth* gGUSPatSynth;
-static int	    gWinWidth, gWinHeight;
-static double	    gBegin;
-static piano_t	    gPiano[96];
-static double	    gGetX[96];
-static double	    gGetWidth[96];
-static channel_t    gChannels[128] = {0};
-static FileStream*  gFsAudio;
-static MidiStream*  gMsAudio;
-static FileStream*  gFsVisual;
-static MidiStream*  gMsVisual;
+static int	   gWinWidth, gWinHeight;
+static double	   gBegin;
+static piano_t	   gPiano[96];
+static double	   gGetX[96];
+static double	   gGetWidth[96];
+static channel_t   gChannels[128] = {0};
+static EasyMidi*   gEasyMidi;
+static FileStream* gFsVisual;
+static MidiStream* gMsVisual;
 
 /* taken from stackoverflow */
 static void hsv2rgb(double* in, double* out) {
@@ -98,24 +97,6 @@ static void hsv2rgb(double* in, double* out) {
 	}
 }
 
-static void audioCallback(MidiStream* ms, const MidiEvent* event) {
-	if(event->type == MidiEventNote) {
-		GUSPatSynth_Note(gGUSPatSynth, event->note.channel, event->note.key, event->note.velocity);
-	} else if(event->type == MidiEventControl) {
-		if(event->control.key == MidiControlBankSelectMSB) {
-			GUSPatSynth_SetBankMSB(gGUSPatSynth, event->control.channel, event->control.value);
-		} else if(event->control.key == MidiControlBankSelectLSB) {
-			GUSPatSynth_SetBankLSB(gGUSPatSynth, event->control.channel, event->control.value);
-		}
-	} else if(event->type == MidiEventProgramChange) {
-		int drum = 0;
-
-		if(gGUSPatSynth->channels[event->programChange.channel].bankMsb == 120 || event->programChange.channel == 9) drum = 1;
-
-		GUSPatSynth_SetProgram(gGUSPatSynth, event->programChange.channel, event->programChange.program, drum);
-	}
-}
-
 static void visualCallback(MidiStream* ms, const MidiEvent* event) {
 	if(event->type == MidiEventNote) {
 		int	   i;
@@ -150,7 +131,7 @@ static void visualCallback(MidiStream* ms, const MidiEvent* event) {
 }
 
 static void render(short* out, int frames) {
-	GUSPatSynth_RenderShort(gGUSPatSynth, out, frames);
+	EasyMidi_RenderShort(gEasyMidi, out, frames);
 }
 
 #define WhiteKeys 56
@@ -285,15 +266,12 @@ static void drawNotes(void) {
 }
 
 static int openMidi(char** argv) {
-	gFsAudio = gFsVisual = NULL;
-	gMsAudio = gMsVisual = NULL;
+	gFsVisual = NULL;
+	gMsVisual = NULL;
 
-	if((gFsAudio = FileStream_New(argv[2], NULL)) == NULL) {
-		fprintf(stderr, "cannot open midi\n");
-		return 1;
-	}
+	EasyMidi_Reset(gEasyMidi);
 
-	if((gMsAudio = MidiStream_New(gFsAudio, audioCallback)) == NULL) {
+	if(!EasyMidi_Load(gEasyMidi, argv[2])) {
 		fprintf(stderr, "cannot open midi\n");
 		return 1;
 	}
@@ -305,10 +283,9 @@ static int openMidi(char** argv) {
 }
 
 static void closeMidi(void) {
-	if(gMsAudio != NULL) MidiStream_Destroy(gMsAudio);
 	if(gMsVisual != NULL) MidiStream_Destroy(gMsVisual);
-	if(gFsAudio != NULL) FileStream_Destroy(gFsAudio);
 	if(gFsVisual != NULL) FileStream_Destroy(gFsVisual);
+	if(gEasyMidi != NULL) EasyMidi_Destroy(gEasyMidi);
 }
 
 int main(int argc, char** argv) {
@@ -326,22 +303,15 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	if((cfgfs = FileStream_New(argv[1], NULL)) == NULL) {
-		fprintf(stderr, "cannot open cfg\n");
-		return 1;
-	}
-
-	if((gGUSPatSynth = GUSPatSynth_New(cfgfs, 48000)) == NULL) {
+	if((gEasyMidi = EasyMidi_New(argv[1], 48000)) == NULL) {
 		FileStream_Destroy(cfgfs);
 
 		fprintf(stderr, "cannot open gus patches\n");
 		return 1;
 	}
 
-	FileStream_Destroy(cfgfs);
-
 	if(openMidi(argv) != 0) {
-		GUSPatSynth_Destroy(gGUSPatSynth);
+		EasyMidi_Destroy(gEasyMidi);
 
 		return 1;
 	}
@@ -418,7 +388,7 @@ int main(int argc, char** argv) {
 
 		dt = SDL_GetTicks() - delta;
 		if(dt >= 1000 / 60) {
-			while(gMsVisual->currentSec < gMsAudio->currentSec + 1.0 / FACTOR) {
+			while(gMsVisual->currentSec < gEasyMidi->ms->currentSec + 1.0 / FACTOR) {
 				MidiStream_Advance(gMsVisual, (double)BUFSZ / 48000);
 			}
 
@@ -434,12 +404,9 @@ int main(int argc, char** argv) {
 			SDL_GL_SwapWindow(window);
 		}
 
-		for(i = 0; i < gMsAudio->nTracks && gMsAudio->tracks[i].finished; i++);
-		if(i == gMsAudio->nTracks) break;
+		if(EasyMidi_IsFinished(gEasyMidi)) break;
 
 		while(SDL_GetQueuedAudioSize(audio) < BUFSZ * BUFFERS) {
-			MidiStream_Advance(gMsAudio, BUFSZ / 48000.0);
-
 			render(buffer, BUFSZ);
 			SDL_QueueAudio(audio, buffer, sizeof(buffer));
 		}
@@ -453,7 +420,6 @@ cleangl:;
 	SDL_DestroyWindow(window);
 cleanmidi:;
 	closeMidi();
-	GUSPatSynth_Destroy(gGUSPatSynth);
 
 	return st;
 }

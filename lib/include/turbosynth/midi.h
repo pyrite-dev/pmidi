@@ -28,7 +28,8 @@ typedef void (*MidiCallback)(MidiStream* ms, const MidiEvent* event);
 enum MidiEventType {
 	MidiEventNote = 0,
 	MidiEventControl,
-	MidiEventProgramChange
+	MidiEventProgramChange,
+	MidiEventPitchWheelChange
 };
 
 enum MidiControlType {
@@ -55,6 +56,12 @@ union MidiEvent {
 		unsigned char channel;
 		unsigned char program;
 	} programChange;
+	struct {
+		unsigned char type;
+		unsigned char channel;
+		short	      bend;
+		double	      semitone;
+	} pitchWheelChange;
 };
 
 struct MidiTrack {
