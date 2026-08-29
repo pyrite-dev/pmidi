@@ -100,6 +100,7 @@ GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate);
 int	     GUSPatSynth_Load(GUSPatSynth* self, int bank, int program, int drum, FileStream* fs); /* true if success */
 void	     GUSPatSynth_Unload(GUSPatSynth* self, int bank, int program, int drum);
 void	     GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity);
+void	     GUSPatSynth_NoteOff(GUSPatSynth* self, int key);
 void	     GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int drum);
 void	     GUSPatSynth_SetBank(GUSPatSynth* self, int channel, int bank); /* immedaite change; use SetBankMSB/SetBankLSB if you are passing MIDI messages */
 void	     GUSPatSynth_SetBankMSB(GUSPatSynth* self, int channel, int bank);

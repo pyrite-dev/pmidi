@@ -549,6 +549,14 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 	}
 }
 
+void GUSPatSynth_NoteOff(GUSPatSynth* self, int key) {
+	int i;
+
+	for(i = 0; i < GUSPATSYNTH_CHANNELS; i++) {
+		GUSPatSynth_Note(self, i, key, 0);
+	}
+}
+
 void GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int drum) {
 	int bank = (self->channels[channel].bankMsb << 7) | self->channels[channel].bankLsb;
 

@@ -14,7 +14,7 @@ endif()
 if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
 	set(FS_SYMS "'_FileStream_New', '_FileStream_Destroy'")
 	set(MIDI_SYMS "'_MidiStream_New', '_MidiStream_Advance', '_MidiStream_Destroy'")
-	set(GUSPAT_SYMS "'_GUSPatSynth_New', '_GUSPatSynth_Load', '_GUSPatSynth_Unload', '_GUSPatSynth_Note', '_GUSPatSynth_SetProgram', '_GUSPatSynth_SetBank', '_GUSPatSynth_SetBankMSB', '_GUSPatSynth_SetBankLSB', '_GUSPatSynth_ChangePitchWheel', '_GUSPatSynth_RenderShort', '_GUSPatSynth_RenderFloat', '_GUSPatSynth_Reset', '_GUSPatSynth_Destroy'")
+	set(GUSPAT_SYMS "'_GUSPatSynth_New', '_GUSPatSynth_Load', '_GUSPatSynth_Unload', '_GUSPatSynth_Note', '_GUSPatSynth_NoteOff', '_GUSPatSynth_SetProgram', '_GUSPatSynth_SetBank', '_GUSPatSynth_SetBankMSB', '_GUSPatSynth_SetBankLSB', '_GUSPatSynth_ChangePitchWheel', '_GUSPatSynth_RenderShort', '_GUSPatSynth_RenderFloat', '_GUSPatSynth_Reset', '_GUSPatSynth_Destroy'")
 	set(EASYMIDI_SYMS "'_EasyMidi_New', '_EasyMidi_New2', '_EasyMidi_MidiCallback', '_EasyMidi_Load', '_EasyMidi_Load2', '_EasyMidi_IsFinished', '_EasyMidi_RenderShort', '_EasyMidi_RenderFloat', '_EasyMidi_Reset', '_EasyMidi_Destroy'")
 	add_executable(turbosynthwasm turbosynthwasm.c)
 	target_link_options(turbosynthwasm PRIVATE
