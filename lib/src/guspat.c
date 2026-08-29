@@ -3,6 +3,15 @@
 #define LINESZ 1024
 #define TOL 0
 
+#define RESAMPLE_ON_PLAY
+#define MONAURAL
+
+#ifdef MONAURAL
+#define CHANNELS 1
+#else
+#define CHANNELS 2
+#endif
+
 static int freqTable[96] = {
     8176, 8662, 9177, 9723,
     10301, 10913, 11562, 12250,
@@ -236,8 +245,17 @@ static void loadSample(GUSSample* sample, FileStream* fs, int patchChannels, int
 	sample->loopBi	     = (modes & (1 << 3)) ? 1 : 0;
 	sample->loopBackward = (modes & (1 << 4)) ? 1 : 0;
 
-	sample->startLoop = sample->startLoop / ((modes & 1) ? 2 : 1) / (patchChannels == 2 ? 2 : 1) * rate / sampleRate;
-	sample->endLoop	  = sample->endLoop / ((modes & 1) ? 2 : 1) / (patchChannels == 2 ? 2 : 1) * rate / sampleRate;
+	sample->startLoop = sample->startLoop / ((modes & 1) ? 2 : 1) / (patchChannels == 2 ? 2 : 1);
+	sample->endLoop	  = sample->endLoop / ((modes & 1) ? 2 : 1) / (patchChannels == 2 ? 2 : 1);
+
+#ifdef RESAMPLE_ON_PLAY
+	sample->ratio = (float)sampleRate / rate;
+#else
+	sample->ratio = 1;
+
+	sample->startLoop = sample->startLoop * rate / sampleRate;
+	sample->endLoop	  = sample->endLoop * rate / sampleRate;
+#endif
 
 #ifdef DEBUG
 	fprintf(stderr, "new sample, wave size is %d, start loop is %d, end loop is %d, sample rate is %d, low freq is %d, high freq is %d, root freq is %d\n", waveSize, sample->startLoop, sample->endLoop, sampleRate, sample->lowFrequency, sample->highFrequency, sample->rootFrequency);
@@ -260,12 +278,25 @@ static void loadSample(GUSSample* sample, FileStream* fs, int patchChannels, int
 	if(modes & 1) waveSize /= 2;
 	if(patchChannels == 2) waveSize /= 2;
 
+#ifdef RESAMPLE_ON_PLAY
+	sample->nWaveFrames = waveSize;
+#else
 	sample->nWaveFrames = waveSize * rate / sampleRate;
-	sample->wave	    = calloc(sample->nWaveFrames * 2, sizeof(*sample->wave));
+#endif
+
+#ifdef MONAURAL
+	sample->wave = calloc(sample->nWaveFrames, sizeof(*sample->wave));
+#else
+	sample->wave = calloc(sample->nWaveFrames * 2, sizeof(*sample->wave));
+#endif
 
 	for(i = 0; i < sample->nWaveFrames; i++) {
 		float fl, fr;
-		int   from = i * sampleRate / rate;
+#ifdef RESAMPLE_ON_PLAY
+		int from = i;
+#else
+		int from = i * sampleRate / rate;
+#endif
 
 		switch(modes & 3) {
 		case 0: /* S8 */
@@ -305,8 +336,12 @@ static void loadSample(GUSSample* sample, FileStream* fs, int patchChannels, int
 			break;
 		}
 
+#ifdef MONAURAL
+		sample->wave[i] = (fl + fr) / 2 * 32767;
+#else
 		sample->wave[i * 2 + 0] = fl * 32767;
 		sample->wave[i * 2 + 1] = fr * 32767;
+#endif
 	}
 
 	free(wave);
@@ -445,7 +480,7 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 
 					if(sample->lowFrequency <= (freq + TOL) && freq <= (sample->highFrequency + TOL)) {
 						voice->sample = sample;
-						voice->step   = (unsigned int)((double)freq / sample->rootFrequency * 65536);
+						voice->step   = (unsigned int)((double)freq / sample->rootFrequency * sample->ratio * 65536);
 						voice->loop   = sample->loop && !sample->loopBi && !sample->loopBackward;
 					}
 				}
@@ -493,7 +528,7 @@ void GUSPatSynth_SetBankLSB(GUSPatSynth* self, int channel, int bank) {
 \
 			for(k = 0; k < frames; k++) { \
 				int    x    = voice->x >> 16; \
-				short* wave = &sample->wave[x * 2]; \
+				short* wave = &sample->wave[x * CHANNELS]; \
 \
 				proc; \
 \
@@ -515,8 +550,13 @@ void GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames) {
 	int* mix = calloc(frames * 2, sizeof(*mix));
 
 	RENDER({
+#ifdef MONAURAL
+		mix[k * 2 + 0] += ((int)wave[0] * voice->volume) >> 16;
+		mix[k * 2 + 1] += ((int)wave[0] * voice->volume) >> 16;
+#else
 		mix[k * 2 + 0] += ((int)wave[0] * voice->volume) >> 16;
 		mix[k * 2 + 1] += ((int)wave[1] * voice->volume) >> 16;
+#endif
 	});
 
 	for(i = 0; i < frames * 2; i++) {
@@ -533,8 +573,13 @@ void GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames) {
 
 void GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames) {
 	RENDER({
+#ifdef MONAURAL
+		output[k * 2 + 0] += (float)wave[0] / 32767 * (voice->volume / 32768.0);
+		output[k * 2 + 1] += (float)wave[0] / 32767 * (voice->volume / 32768.0);
+#else
 		output[k * 2 + 0] += (float)wave[0] / 32767 * (voice->volume / 32768.0);
 		output[k * 2 + 1] += (float)wave[1] / 32767 * (voice->volume / 32768.0);
+#endif
 	});
 
 	for(i = 0; i < frames * 2; i++) {

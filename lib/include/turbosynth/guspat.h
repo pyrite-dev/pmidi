@@ -25,8 +25,9 @@ struct GUSSample {
 	unsigned int startLoop;
 	unsigned int endLoop;
 
-	short*	     wave;	  /* stereo interleaved @ self->rate Hz */
+	short*	     wave;
 	unsigned int nWaveFrames; /* stereo frames */
+	float	     ratio;
 
 	int loop;	  /* loop or not */
 	int loopBi;	  /* 0 = uni, 1 = bi */

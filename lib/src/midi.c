@@ -263,7 +263,7 @@ void MidiStream_Advance(MidiStream* self, double sec) {
 			FileStream_Seek(self->fs, self->tracks[i].filePos);
 			readEvent(self, &self->tracks[i]);
 
-			if(FileStream_Tell(self->fs) - self->tracks[i].fileStart >= self->tracks[i].dataSize){
+			if(FileStream_Tell(self->fs) - self->tracks[i].fileStart >= self->tracks[i].dataSize) {
 				self->tracks[i].finished = 1;
 				continue;
 			}
