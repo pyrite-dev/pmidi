@@ -34,7 +34,7 @@ window.onload = async function(){
 	EasyMidi_Reset = TurboSynth.cwrap("EasyMidi_Reset", null, ["number"]);
 	EasyMidi_Destroy = TurboSynth.cwrap("EasyMidi_Destroy", null, ["number"]);
 
-	const zip = await JSZip.loadAsync(await (await fetch("msgs.zip")).arrayBuffer());
+	const zip = await JSZip.loadAsync(await (await fetch("florestan.zip")).arrayBuffer());
 
 	for(let i of Object.keys(zip.files)){
 		if(zip.files[i].dir){
@@ -49,7 +49,7 @@ window.onload = async function(){
 
 	TurboSynth.FS.writeFile("input.mid", defaultMidi);
 
-	if((EasyMidi = EasyMidi_New("msgs.cfg", 44100)) == 0) return;	
+	if((EasyMidi = EasyMidi_New("florestan.cfg", 44100)) == 0) return;	
 	console.log("synthesizer loaded");
 
 	EasyMidi_BufferPointer = TurboSynth._malloc(2 * frames * 4);
