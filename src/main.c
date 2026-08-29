@@ -71,8 +71,6 @@ int main(int argc, char** argv) {
 	}
 
 	if((gEasyMidi = EasyMidi_New(argv[1], RATE)) == NULL) {
-		EasyMidi_Destroy(gEasyMidi);
-
 		fprintf(stderr, "cannot open gus patches\n");
 		return 1;
 	}

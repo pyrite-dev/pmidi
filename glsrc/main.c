@@ -289,7 +289,6 @@ static void closeMidi(void) {
 }
 
 int main(int argc, char** argv) {
-	FileStream*	  cfgfs;
 	SDL_Window*	  window;
 	SDL_Renderer*	  renderer;
 	SDL_AudioSpec	  spec;
@@ -304,8 +303,6 @@ int main(int argc, char** argv) {
 	}
 
 	if((gEasyMidi = EasyMidi_New(argv[1], 48000)) == NULL) {
-		FileStream_Destroy(cfgfs);
-
 		fprintf(stderr, "cannot open gus patches\n");
 		return 1;
 	}
