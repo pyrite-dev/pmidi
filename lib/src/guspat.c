@@ -579,28 +579,26 @@ void GUSPatSynth_ChangePitchWheel(GUSPatSynth* self, int channel, double semiton
 #define ENVELOPE \
 	{ \
 		int rel2 = voice->released && voice->envIndex == 2; \
-		int a	 = rel2 ? voice->currentVolume : sample->envOffset[voice->envIndex]; \
 		int b	 = rel2 ? sample->envOffset[3] : sample->envOffset[voice->envIndex + 1]; \
+		int inc	 = sample->envIncrement[voice->envIndex]; \
 \
-		if((a <= voice->currentVolume && voice->currentVolume <= b) || (b <= voice->currentVolume && voice->currentVolume <= a)) { \
-			if(a < b) { \
-				voice->currentVolume += sample->envIncrement[voice->envIndex]; \
-				if(voice->currentVolume >= b) { \
-					voice->currentVolume = b; \
-				} \
-			} else if(a > b) { \
-				voice->currentVolume -= sample->envIncrement[voice->envIndex]; \
-				if(voice->currentVolume <= b) { \
-					voice->currentVolume = b; \
-				} \
-			} else { \
+		if(voice->currentVolume < b) { \
+			voice->currentVolume += inc; \
+			if(voice->currentVolume >= b) { \
 				voice->currentVolume = b; \
 			} \
-\
-			if(voice->currentVolume == b && (voice->released || !sample->sustain || voice->envIndex != 1)) voice->envIndex++; \
-			if(voice->envIndex == 5) { \
-				voice->used = 0; \
+		} else if(voice->currentVolume > b) { \
+			voice->currentVolume -= inc; \
+			if(voice->currentVolume <= b) { \
+				voice->currentVolume = b; \
 			} \
+		} else { \
+			voice->currentVolume = b; \
+		} \
+\
+		if(voice->currentVolume == b && (voice->released || !sample->sustain || voice->envIndex != 1)) voice->envIndex++; \
+		if(voice->envIndex == 5) { \
+			voice->used = 0; \
 		} \
 	}
 
