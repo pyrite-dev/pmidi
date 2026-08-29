@@ -63,6 +63,7 @@ static void StandardFileStream_Close(FileStream* self) {
 #else
 	fclose(sfs->fp);
 #endif
+	free(sfs);
 }
 
 FileStream* FileStream_New(const char* path, void* arg) {
@@ -104,5 +105,4 @@ FileStream* FileStream_New(const char* path, void* arg) {
 
 void FileStream_Destroy(FileStream* self) {
 	FileStream_Close(self);
-	free(self);
 }
