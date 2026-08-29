@@ -8,8 +8,12 @@
 
 #ifdef MONAURAL
 #define CHANNELS 1
+#define CH1 0
+#define CH2 0
 #else
 #define CHANNELS 2
+#define CH1 0
+#define CH2 1
 #endif
 
 static const int freqTable[128] = {
@@ -643,13 +647,8 @@ void GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames) {
 	int* mix = calloc(frames * 2, sizeof(*mix));
 
 	RENDER({
-#ifdef MONAURAL
-		mix[k * 2 + 0] += ((((int)wave[0] * voice->volume) >> 16) * voice->currentVolume) >> 16;
-		mix[k * 2 + 1] += ((((int)wave[0] * voice->volume) >> 16) * voice->currentVolume) >> 16;
-#else
-		mix[k * 2 + 0] += ((((int)wave[0] * voice->volume) >> 16) * voice->currentVolume) >> 16;
-		mix[k * 2 + 1] += ((((int)wave[1] * voice->volume) >> 16) * voice->currentVolume) >> 16;
-#endif
+		mix[k * 2 + 0] += ((((int)wave[CH1] * voice->volume) >> 16) * voice->currentVolume) >> 16;
+		mix[k * 2 + 1] += ((((int)wave[CH2] * voice->volume) >> 16) * voice->currentVolume) >> 16;
 	});
 
 	for(i = 0; i < frames * 2; i++) {
@@ -668,13 +667,8 @@ void GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames) {
 	memset(output, 0, frames * 2 * sizeof(*output));
 
 	RENDER({
-#ifdef MONAURAL
-		output[k * 2 + 0] += (float)wave[0] / 32767 * (voice->volume / 32768.0) * (voice->currentVolume / 32768.0);
-		output[k * 2 + 1] += (float)wave[0] / 32767 * (voice->volume / 32768.0) * (voice->currentVolume / 32768.0);
-#else
-		output[k * 2 + 0] += (float)wave[0] / 32767 * (voice->volume / 32768.0) * (voice->currentVolume / 32768.0);
-		output[k * 2 + 1] += (float)wave[1] / 32767 * (voice->volume / 32768.0) * (voice->currentVolume / 32768.0);
-#endif
+		output[k * 2 + 0] += (float)wave[CH1] / 32767 * (voice->volume / 32768.0) * (voice->currentVolume / 32768.0);
+		output[k * 2 + 1] += (float)wave[CH2] / 32767 * (voice->volume / 32768.0) * (voice->currentVolume / 32768.0);
 	});
 
 	for(i = 0; i < frames * 2; i++) {
