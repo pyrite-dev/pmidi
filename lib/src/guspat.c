@@ -463,8 +463,9 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 		for(i = 0; i < GUSPATSYNTH_VOICES && (voice = &self->channels[channel].voices[i])->used; i++);
 
 		if(i < GUSPATSYNTH_VOICES) {
+			int	       drum = self->channels[channel].program >= 0x80;
 			GUSProgramSet* ps   = getProgramSet(self, self->channels[channel].bank);
-			GUSProgram*    prog = &(*ps)[self->channels[channel].program >= 0x80 ? (0x80 | key) : self->channels[channel].program];
+			GUSProgram*    prog = &(*ps)[drum ? (0x80 | key) : self->channels[channel].program];
 
 			voice->key    = key;
 			voice->sample = NULL;
@@ -478,38 +479,46 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 				for(i = 0; i < prog->nSamples; i++) {
 					GUSSample* sample = &prog->samples[i];
 
-					if(sample->lowFrequency <= (freq + TOL) && freq <= (sample->highFrequency + TOL)) {
+					if(drum || (sample->lowFrequency <= (freq + TOL) && freq <= (sample->highFrequency + TOL))) {
 						voice->sample = sample;
-						voice->step   = (unsigned int)((double)freq / sample->rootFrequency * sample->ratio * 65536);
+						voice->step   = (unsigned int)((double)(drum ? sample->rootFrequency : freq) / sample->rootFrequency * sample->ratio * 65536);
 						voice->loop   = sample->loop && !sample->loopBi && !sample->loopBackward;
 					}
 				}
 			}
 
 			if(voice->sample != NULL) voice->used = 1;
+
+#ifdef DEBUG
+			if(!voice->sample) {
+				fprintf(stderr, "bank %d program %d drum %s\n", self->channels[channel].bank, self->channels[channel].program >= 0x80 ? key : self->channels[channel].program, self->channels[channel].program >= 0x80 ? "true" : "false");
+			}
+#endif
 		}
 	}
 }
 
 void GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int drum) {
-	int bank = (self->channels[channel].bankMsb << 8) | self->channels[channel].bankLsb;
+	int bank = (self->channels[channel].bankMsb << 7) | self->channels[channel].bankLsb;
+
+	bank = 0;
 
 	GUSPatSynth_SetBank(self, channel, bank);
-	self->channels[channel].program = (drum ? 0x80 : 0) | program;
+	self->channels[channel].program = (drum ? 0x80 : 0) | (program & 0x7f);
 }
 
 void GUSPatSynth_SetBank(GUSPatSynth* self, int channel, int bank) {
 	if(getProgramSet(self, bank) != NULL) self->channels[channel].bank = bank;
-	self->channels[channel].bankMsb = (bank >> 8) & 0xff;
-	self->channels[channel].bankLsb = bank & 0xff;
+	self->channels[channel].bankMsb = (bank >> 7) & 0x7f;
+	self->channels[channel].bankLsb = bank & 0x7f;
 }
 
 void GUSPatSynth_SetBankMSB(GUSPatSynth* self, int channel, int bank) {
-	self->channels[channel].bankMsb = bank;
+	self->channels[channel].bankMsb = bank & 0x7f;
 }
 
 void GUSPatSynth_SetBankLSB(GUSPatSynth* self, int channel, int bank) {
-	self->channels[channel].bankLsb = bank;
+	self->channels[channel].bankLsb = bank & 0x7f;
 }
 
 #define RENDER(proc) \
