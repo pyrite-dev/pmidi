@@ -1,0 +1,137 @@
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<title>MIDI Player</title>
+		<script src="turbosynthwasm.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+		<script>
+var TurboSynth;
+var EasyMidi;
+var EasyMidi_New;
+var EasyMidi_Load;
+var EasyMidi_IsFinished;
+var EasyMidi_RenderFloat;
+var EasyMidi_Reset;
+var EasyMidi_Destroy;
+var EasyMidi_BufferPointer;
+var EasyMidi_Buffer;
+var defaultMidi;
+
+const frames = 480;
+var audioContext;
+
+window.onload = async function(){
+	document.getElementById("play").disabled = true;
+
+	TurboSynth = await TurboSynthWASM();
+
+	EasyMidi_New = TurboSynth.cwrap("EasyMidi_New", "number", ["string", "number"]);
+	EasyMidi_Load = TurboSynth.cwrap("EasyMidi_Load", "number", ["number", "string"]);
+	EasyMidi_IsFinished = TurboSynth.cwrap("EasyMidi_IsFinished", "number", ["number"]);
+	EasyMidi_RenderFloat = TurboSynth.cwrap("EasyMidi_RenderFloat", null, ["number", "number", "number"]);
+	EasyMidi_Reset = TurboSynth.cwrap("EasyMidi_Reset", null, ["number"]);
+	EasyMidi_Destroy = TurboSynth.cwrap("EasyMidi_Destroy", null, ["number"]);
+
+	const zip = await JSZip.loadAsync(await (await fetch("ct2mgm.zip")).arrayBuffer());
+
+	for(let i of Object.keys(zip.files)){
+		if(zip.files[i].dir){
+			TurboSynth.FS.mkdir(i);
+		}else{
+			TurboSynth.FS.writeFile(i, await zip.files[i].async("arraybuffer"));
+		}
+		console.log("loaded " + i);
+	}
+
+	defaultMidi = await (await fetch("shanghai.mid")).arrayBuffer();
+
+	TurboSynth.FS.writeFile("input.mid", defaultMidi);
+
+	if((EasyMidi = EasyMidi_New("ct2mgm.cfg", 44100)) == 0) return;	
+	console.log("synthesizer loaded");
+
+	EasyMidi_BufferPointer = TurboSynth._malloc(2 * frames * 4);
+	EasyMidi_Buffer = new Float32Array(TurboSynth.HEAPF32.buffer, EasyMidi_BufferPointer);
+
+	document.getElementById("play").disabled = false;
+};
+
+function play(){
+	const file = document.getElementById("file");
+
+	function loadMidi(){
+		EasyMidi_Reset(EasyMidi);
+		if(!EasyMidi_Load(EasyMidi, "input.mid")) return;	
+		console.log("midi loaded");
+	}
+
+	if(!audioContext){
+		let sources = [];
+		let samples = 0;
+
+		audioContext = new AudioContext();
+		const baseTime = audioContext.currentTime;
+
+		function read(){
+			const audioBuffer = audioContext.createBuffer(2, frames, 44100);
+			const lChannelData = audioBuffer.getChannelData(0);
+			const rChannelData = audioBuffer.getChannelData(1);
+
+			EasyMidi_RenderFloat(EasyMidi, EasyMidi_BufferPointer, frames);
+
+			for(let i = 0; i < frames; i++){
+				lChannelData[i] = EasyMidi_Buffer[2 * i + 0];
+				rChannelData[i] = EasyMidi_Buffer[2 * i + 1];
+			}
+
+			const currentSource = audioContext.createBufferSource();
+			currentSource.buffer = audioBuffer;
+			currentSource.connect(audioContext.destination);
+
+			currentSource.onended = function() {
+				sources = sources.filter((x)=>x != currentSource);
+
+				for(let i = sources.length; i < 5; i++) read();
+			}
+
+			sources.push(currentSource);
+
+			currentSource.start(baseTime + samples / 44100);
+
+			samples += frames;
+		}
+
+		read();
+		read();
+		read();
+		read();
+		read();
+	}
+
+	if(file.files[0]){
+		const reader = new FileReader();
+
+		reader.onload = function() {
+			TurboSynth.FS.writeFile("input.mid", reader.result);
+			loadMidi();
+		};
+
+		reader.readAsArrayBuffer(file.files[0]);
+	}else{
+		TurboSynth.FS.writeFile("input.mid", defaultMidi);
+		loadMidi();
+	}
+}
+		</script>
+	</head>
+	<body>
+		<h1>MIDI Player (Powered by <a href="https://forgejo.nishi.boats/pyrite-dev/pmidi">TurboSynth</a>)</h1>
+		<hr>
+		<p>
+			<input type="file" id="file"> <input type="button" value="Play" onclick="play()" id="play">
+		</p>
+		<p>
+			If you don't select any files, default MIDI gets played...
+		</p>
+	</body>
+</html>
