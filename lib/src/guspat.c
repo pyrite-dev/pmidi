@@ -554,7 +554,7 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 	}
 }
 
-void GUSPatSynth_NoteOffAll(GUSPatSynth* self, int key) {
+void GUSPatSynth_NoteOffAll(GUSPatSynth* self, int channel) {
 	int i;
 
 	for(i = 0; i < GUSPATSYNTH_VOICES; i++) {
