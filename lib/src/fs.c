@@ -14,7 +14,7 @@ typedef struct StandardFileStream {
 #endif
 } StandardFileStream;
 
-static int StandardFileStream_ReadImpl(FileStream* self, void* buf, int size) {
+static int StandardFileStream_Read(FileStream* self, void* buf, int size) {
 	StandardFileStream* sfs = (StandardFileStream*)self;
 #ifdef LOAD_ALL
 	int sz = size > (sfs->size - sfs->seek) ? (sfs->size - sfs->seek) : size;
@@ -38,7 +38,7 @@ static int StandardFileStream_ReadImpl(FileStream* self, void* buf, int size) {
 	return sz;
 }
 
-static void StandardFileStream_SeekImpl(FileStream* self, FileStreamBigUInt pos) {
+static void StandardFileStream_Seek(FileStream* self, FileStreamBigUInt pos) {
 #ifdef LOAD_ALL
 	((StandardFileStream*)self)->seek = pos;
 #else
@@ -46,7 +46,7 @@ static void StandardFileStream_SeekImpl(FileStream* self, FileStreamBigUInt pos)
 #endif
 }
 
-static FileStreamBigUInt StandardFileStream_TellImpl(FileStream* self) {
+static FileStreamBigUInt StandardFileStream_Tell(FileStream* self) {
 #ifdef LOAD_ALL
 	return ((StandardFileStream*)self)->seek;
 #else
@@ -54,7 +54,7 @@ static FileStreamBigUInt StandardFileStream_TellImpl(FileStream* self) {
 #endif
 }
 
-static void StandardFileStream_CloseImpl(FileStream* self) {
+static void StandardFileStream_Close(FileStream* self) {
 	StandardFileStream* sfs = (StandardFileStream*)self;
 
 	free(self->path);
@@ -91,10 +91,10 @@ FileStream* FileStream_New(const char* path, void* arg) {
 #endif
 
 	self->base.New	  = FileStream_New;
-	self->base.Read	  = StandardFileStream_ReadImpl;
-	self->base.Seek	  = StandardFileStream_SeekImpl;
-	self->base.Tell	  = StandardFileStream_TellImpl;
-	self->base.Close  = StandardFileStream_CloseImpl;
+	self->base.Read	  = StandardFileStream_Read;
+	self->base.Seek	  = StandardFileStream_Seek;
+	self->base.Tell	  = StandardFileStream_Tell;
+	self->base.Close  = StandardFileStream_Close;
 	self->base.newArg = arg;
 	self->base.path	  = malloc(strlen(path) + 1);
 	strcpy(self->base.path, path);
