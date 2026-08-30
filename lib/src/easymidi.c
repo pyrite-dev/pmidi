@@ -37,6 +37,10 @@ void EasyMidi_MidiCallback(MidiStream* ms, const MidiEvent* event) {
 			GUSPatSynth_SetBankMSB(synth, event->control.channel, event->control.value);
 		} else if(event->control.key == MidiControlBankSelectLSB) {
 			GUSPatSynth_SetBankLSB(synth, event->control.channel, event->control.value);
+		} else if(event->control.key == MidiControlChannelVolumeMSB) {
+			GUSPatSynth_SetVolumeMSB(synth, event->control.channel, event->control.value);
+		} else if(event->control.key == MidiControlChannelVolumeLSB) {
+			GUSPatSynth_SetVolumeLSB(synth, event->control.channel, event->control.value);
 		}
 	} else if(event->type == MidiEventProgramChange) {
 		int drum = 0;

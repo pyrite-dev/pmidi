@@ -76,7 +76,7 @@ struct GUSChannel {
 	int    bankLsb;
 	double pitchRatio;
 
-	int volume; /* 16.16 */
+	int volume;
 
 	GUSVoice voices[GUSPATSYNTH_VOICES];
 };
@@ -101,7 +101,7 @@ extern "C" {
 GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate);
 int	     GUSPatSynth_Load(GUSPatSynth* self, int bank, int program, int drum, FileStream* fs); /* true if success */
 void	     GUSPatSynth_Unload(GUSPatSynth* self, int bank, int program, int drum);
-void	     GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity);
+void	     GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity); /* velocity is 0-127 */
 void	     GUSPatSynth_NoteOffAll(GUSPatSynth* self, int channel);
 void	     GUSPatSynth_SetBank(GUSPatSynth* self, int channel, int bank); /* immedaite change; use SetBankMSB/SetBankLSB if you are passing MIDI messages */
 void	     GUSPatSynth_SetBankMSB(GUSPatSynth* self, int channel, int bank);
@@ -110,6 +110,8 @@ void	     GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, in
 void	     GUSPatSynth_SetDrum(GUSPatSynth* self, int channel, int drum);
 void	     GUSPatSynth_ChangePitchWheel(GUSPatSynth* self, int channel, double semitone);
 void	     GUSPatSynth_SetVolume(GUSPatSynth* self, int channel, double volume);
+void	     GUSPatSynth_SetVolumeMSB(GUSPatSynth* self, int channel, int bank);
+void	     GUSPatSynth_SetVolumeLSB(GUSPatSynth* self, int channel, int bank);
 void	     GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames);
 void	     GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames);
 void	     GUSPatSynth_Reset(GUSPatSynth* self);

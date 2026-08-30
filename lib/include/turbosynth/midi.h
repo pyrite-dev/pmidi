@@ -33,8 +33,10 @@ enum MidiEventType {
 };
 
 enum MidiControlType {
-	MidiControlBankSelectMSB = 0,
-	MidiControlBankSelectLSB = 32
+	MidiControlBankSelectMSB    = 0,
+	MidiControlBankSelectLSB    = 32,
+	MidiControlChannelVolumeMSB = 7,
+	MidiControlChannelVolumeLSB = 39
 };
 
 union MidiEvent {
