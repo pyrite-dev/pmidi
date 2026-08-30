@@ -53,9 +53,6 @@ window.onload = async function(){
 	if((EasyMidi = EasyMidi_New("florestan.cfg", 44100)) == 0) return;	
 	console.log("synthesizer loaded");
 
-	EasyMidi_BufferPointer = TurboSynth._malloc(2 * frames * 4);
-	EasyMidi_Buffer = new Float32Array(TurboSynth.HEAPF32.buffer, EasyMidi_BufferPointer);
-
 	document.getElementById("play").disabled = false;
 };
 
@@ -74,6 +71,9 @@ function play(){
 		audioContext.resume();
 
 		player = new AudioPlayer(audioContext, 44100);
+
+		EasyMidi_BufferPointer = TurboSynth._malloc(2 * player.frames * 4);
+		EasyMidi_Buffer = new Float32Array(TurboSynth.HEAPF32.buffer, EasyMidi_BufferPointer);
 		
 		player.onbuffer = function(audioBuffer, frames){
 			const lChannelData = audioBuffer.getChannelData(0);

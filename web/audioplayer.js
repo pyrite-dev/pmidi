@@ -4,14 +4,13 @@ class AudioPlayer {
 		let samples = 0;
 		const baseTime = audioContext.currentTime;
 
-		const frames = rate / 100;
-
+		this.frames = rate / 100;
 		this.paused = true;
 		this._shutdown = false;
 		this.onbuffer = ()=>{};
 
 		const read = ()=>{
-			const audioBuffer = audioContext.createBuffer(2, frames, rate);
+			const audioBuffer = audioContext.createBuffer(2, this.frames, rate);
 
 			if(!this.paused){
 				this.onbuffer(audioBuffer, frames);
