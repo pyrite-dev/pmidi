@@ -101,10 +101,10 @@ int	     GUSPatSynth_Load(GUSPatSynth* self, int bank, int program, int drum, Fi
 void	     GUSPatSynth_Unload(GUSPatSynth* self, int bank, int program, int drum);
 void	     GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity);
 void	     GUSPatSynth_NoteOffAll(GUSPatSynth* self, int channel);
-void	     GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int drum);
 void	     GUSPatSynth_SetBank(GUSPatSynth* self, int channel, int bank); /* immedaite change; use SetBankMSB/SetBankLSB if you are passing MIDI messages */
 void	     GUSPatSynth_SetBankMSB(GUSPatSynth* self, int channel, int bank);
 void	     GUSPatSynth_SetBankLSB(GUSPatSynth* self, int channel, int bank);
+void	     GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int drum);
 void	     GUSPatSynth_ChangePitchWheel(GUSPatSynth* self, int channel, double semitone);
 void	     GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames);
 void	     GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames);

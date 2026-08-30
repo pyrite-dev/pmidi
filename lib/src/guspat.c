@@ -569,18 +569,6 @@ void GUSPatSynth_NoteOffAll(GUSPatSynth* self, int channel) {
 	}
 }
 
-void GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int drum) {
-	int bank;
-
-	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
-	if(program < 0 && 0x80 <= program) return;
-
-	bank = (self->channels[channel].bankMsb << 7) | self->channels[channel].bankLsb;
-
-	GUSPatSynth_SetBank(self, channel, bank);
-	self->channels[channel].program = (drum ? 0x80 : 0) | (program & 0x7f);
-}
-
 void GUSPatSynth_SetBank(GUSPatSynth* self, int channel, int bank) {
 	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
 	if(bank < 0 && 0x4000 <= bank) return;
@@ -602,6 +590,18 @@ void GUSPatSynth_SetBankLSB(GUSPatSynth* self, int channel, int bank) {
 	if(bank < 0 && 0x80 <= bank) return;
 
 	self->channels[channel].bankLsb = bank & 0x7f;
+}
+
+void GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int drum) {
+	int bank;
+
+	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+	if(program < 0 && 0x80 <= program) return;
+
+	bank = (self->channels[channel].bankMsb << 7) | self->channels[channel].bankLsb;
+
+	GUSPatSynth_SetBank(self, channel, bank);
+	self->channels[channel].program = (drum ? 0x80 : 0) | (program & 0x7f);
 }
 
 void GUSPatSynth_ChangePitchWheel(GUSPatSynth* self, int channel, double semitone) {
