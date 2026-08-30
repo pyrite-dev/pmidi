@@ -8,6 +8,7 @@ class AudioPlayer {
 		this.paused = true;
 		this._shutdown = false;
 		this.onbuffer = ()=>{};
+		this.onended = ()=>{};
 
 		const read = ()=>{
 			const audioBuffer = audioContext.createBuffer(2, this.frames, rate);
@@ -20,10 +21,13 @@ class AudioPlayer {
 			currentSource.buffer = audioBuffer;
 			currentSource.connect(audioContext.destination);
 
-			currentSource.onended = function() {
+			currentSource.onended = ()=>{
 				sources = sources.filter((x)=>x != currentSource);
 
-				if(this._shutdown) return;
+				if(this._shutdown){
+					if(sources.length == 0) this.onended();
+					return;
+				}
 
 				for(let i = sources.length; i < 5; i++) read();
 			}
