@@ -55,6 +55,6 @@ class AudioPlayer {
 	}
 
 	shutdown(){
-		this.shutdown = true;
+		this._shutdown = true;
 	}
 };
