@@ -7,6 +7,7 @@ class AudioPlayer {
 		const frames = rate / 100;
 
 		this.paused = true;
+		this.shutdown = false;
 		this.onbuffer = ()=>{};
 
 		const read = ()=>{
@@ -22,6 +23,8 @@ class AudioPlayer {
 
 			currentSource.onended = function() {
 				sources = sources.filter((x)=>x != currentSource);
+
+				if(this.shutdown) return;
 
 				for(let i = sources.length; i < 5; i++) read();
 			}
@@ -46,5 +49,9 @@ class AudioPlayer {
 
 	pause(){
 		this.paused = true;
+	}
+
+	shutdown(){
+		this.shutdown = true;
 	}
 };
