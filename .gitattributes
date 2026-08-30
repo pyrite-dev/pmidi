@@ -1,3 +1,4 @@
 miniaudio.* linguist-generated
 stb_*.* linguist-generated
 /patches/*/*.pat linguist-generated
+/web/turbosynthwasm.js linguist-generated
