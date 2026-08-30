@@ -487,6 +487,8 @@ void GUSPatSynth_Unload(GUSPatSynth* self, int bank, int program, int drum) {
 void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 	int i;
 
+	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+
 	if(velocity == 0) {
 		for(i = 0; i < GUSPATSYNTH_VOICES; i++) {
 			GUSVoice* voice = &self->channels[channel].voices[i];
@@ -557,6 +559,8 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 void GUSPatSynth_NoteOffAll(GUSPatSynth* self, int channel) {
 	int i;
 
+	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+
 	for(i = 0; i < GUSPATSYNTH_VOICES; i++) {
 		GUSVoice* voice = &self->channels[channel].voices[i];
 		if(!voice->used || voice->released) continue;
@@ -566,28 +570,40 @@ void GUSPatSynth_NoteOffAll(GUSPatSynth* self, int channel) {
 }
 
 void GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int drum) {
-	int bank = (self->channels[channel].bankMsb << 7) | self->channels[channel].bankLsb;
+	int bank;
+
+	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+
+	bank = (self->channels[channel].bankMsb << 7) | self->channels[channel].bankLsb;
 
 	GUSPatSynth_SetBank(self, channel, bank);
 	self->channels[channel].program = (drum ? 0x80 : 0) | (program & 0x7f);
 }
 
 void GUSPatSynth_SetBank(GUSPatSynth* self, int channel, int bank) {
+	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+
 	if(getProgramSet(self, bank) != NULL) self->channels[channel].bank = bank;
 	self->channels[channel].bankMsb = (bank >> 7) & 0x7f;
 	self->channels[channel].bankLsb = bank & 0x7f;
 }
 
 void GUSPatSynth_SetBankMSB(GUSPatSynth* self, int channel, int bank) {
+	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+
 	self->channels[channel].bankMsb = bank & 0x7f;
 }
 
 void GUSPatSynth_SetBankLSB(GUSPatSynth* self, int channel, int bank) {
+	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+
 	self->channels[channel].bankLsb = bank & 0x7f;
 }
 
 void GUSPatSynth_ChangePitchWheel(GUSPatSynth* self, int channel, double semitone) {
 	int i;
+
+	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
 
 	self->channels[channel].pitchRatio = pow(2, semitone / 12);
 
