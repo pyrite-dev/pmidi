@@ -35,9 +35,9 @@ struct piano {
 
 static int	   gWinWidth, gWinHeight;
 static double	   gBegin;
-static piano_t	   gPiano[96];
-static double	   gGetX[96];
-static double	   gGetWidth[96];
+static piano_t	   gPiano[128];
+static double	   gGetX[128];
+static double	   gGetWidth[128];
 static channel_t   gChannels[128] = {0};
 static EasyMidi*   gEasyMidi;
 static FileStream* gFsVisual;
@@ -113,7 +113,7 @@ static void visualCallback(MidiStream* ms, const MidiEvent* event) {
 					v->end = ms->currentSec;
 				}
 			}
-		} else if(0 <= event->note.key && event->note.key < 96) {
+		} else if(0 <= event->note.key && event->note.key < 128) {
 			voice_t v;
 
 			v.key	= event->note.key;
@@ -134,7 +134,7 @@ static void render(short* out, int frames) {
 	EasyMidi_RenderShort(gEasyMidi, out, frames);
 }
 
-#define WhiteKeys 56
+#define WhiteKeys 75
 #define WhiteHeight 50
 #define BlackHeight 30
 
@@ -178,7 +178,7 @@ static void drawPiano(void) {
 	int i, j;
 
 	for(i = 0; i < 4; i++) {
-		for(j = 0; j < 96; j++) {
+		for(j = 0; j < 128; j++) {
 			double x = gGetX[j];
 			double y = (isBlack(j) ? BlackHeight : WhiteHeight) + gWinHeight - WhiteHeight;
 			double w = gGetWidth[j];
@@ -209,59 +209,63 @@ static void drawPiano(void) {
 }
 
 static void drawNotes(void) {
-	int    i, j, k;
+	int    i, j, k, l;
 	double t = (SDL_GetTicks() - gBegin) / 1000.0;
 	double hsv[3];
 
 	hsv[1] = 0.8;
 	hsv[2] = 1.0;
 
-	for(k = 0; k < 2; k++) {
-		glBegin(k == 0 ? GL_QUADS : GL_LINES);
-		for(i = 0; i < 128; i++) {
-			channel_t* c = &gChannels[i];
+	for(l = 0; l < 2; l++) {
+		for(k = 0; k < 2; k++) {
+			glBegin(k == 0 ? GL_QUADS : GL_LINES);
+			for(i = 0; i < 128; i++) {
+				channel_t* c = &gChannels[i];
 
-			for(j = 0; j < VOICES; j++) {
-				voice_t* v  = &c->voices[j];
-				double	 x1 = 0, x2 = 0, y1 = 0, y2 = 0;
-				double	 factor = 1.0 / FACTOR;
-				double*	 rgb	= gPiano[v->key].rgb;
+				for(j = 0; j < VOICES; j++) {
+					voice_t* v  = &c->voices[j];
+					double	 x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+					double	 factor = 1.0 / FACTOR;
+					double*	 rgb	= gPiano[v->key].rgb;
 
-				if(!v->used) continue;
+					if(!v->used) continue;
+					if(l == 0 && isBlack(v->key)) continue;
+					if(l == 1 && !isBlack(v->key)) continue;
 
-				x1 = gGetX[v->key];
-				x2 = x1 + gGetWidth[v->key];
-				y1 = (v->end < 0) ? -10 : (gWinHeight - (v->end - t) / factor * gWinHeight);
-				y2 = gWinHeight - (v->start - t) / factor * gWinHeight;
+					x1 = gGetX[v->key];
+					x2 = x1 + gGetWidth[v->key];
+					y1 = (v->end < 0) ? -10 : (gWinHeight - (v->end - t) / factor * gWinHeight);
+					y2 = gWinHeight - (v->start - t) / factor * gWinHeight;
 
-				if(y1 >= gWinHeight) {
-					gPiano[v->key].playing = 0;
-					c->voices[j].used      = 0;
-				} else {
-					if(k == 1) glColor3f(0, 0, 0);
+					if(y1 >= gWinHeight) {
+						gPiano[v->key].playing = 0;
+						c->voices[j].used      = 0;
+					} else {
+						if(k == 1) glColor3f(0, 0, 0);
 
-					if(k == 0) glColor3f(rgb[0], rgb[1], rgb[2]);
-					glVertex2f(x1, y1);
-					if(k == 0) glColor3f(rgb[0] - 0.1, rgb[1] - 0.1, rgb[2] - 0.1);
-					glVertex2f(x2, y1);
-					if(k == 1) glVertex2f(x2, y1);
-					if(k == 0) glColor3f(rgb[0] - 0.1, rgb[1] - 0.1, rgb[2] - 0.1);
-					glVertex2f(x2, y2);
-					if(k == 1) glVertex2f(x2, y2);
-					if(k == 0) glColor3f(rgb[0], rgb[1], rgb[2]);
-					glVertex2f(x1, y2);
-					if(k == 1) {
-						glVertex2f(x1, y2);
+						if(k == 0) glColor3f(rgb[0], rgb[1], rgb[2]);
 						glVertex2f(x1, y1);
-					}
+						if(k == 0) glColor3f(rgb[0] - 0.1, rgb[1] - 0.1, rgb[2] - 0.1);
+						glVertex2f(x2, y1);
+						if(k == 1) glVertex2f(x2, y1);
+						if(k == 0) glColor3f(rgb[0] - 0.1, rgb[1] - 0.1, rgb[2] - 0.1);
+						glVertex2f(x2, y2);
+						if(k == 1) glVertex2f(x2, y2);
+						if(k == 0) glColor3f(rgb[0], rgb[1], rgb[2]);
+						glVertex2f(x1, y2);
+						if(k == 1) {
+							glVertex2f(x1, y2);
+							glVertex2f(x1, y1);
+						}
 
-					if(gPiano[v->key].playing == 0 && y2 >= (gWinHeight - WhiteHeight)) {
-						gPiano[v->key].playing = 1;
+						if(gPiano[v->key].playing == 0 && y2 >= (gWinHeight - WhiteHeight)) {
+							gPiano[v->key].playing = 1;
+						}
 					}
 				}
 			}
+			glEnd();
 		}
-		glEnd();
 	}
 }
 
@@ -359,10 +363,10 @@ int main(int argc, char** argv) {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	for(i = 0; i < 96; i++) {
+	for(i = 0; i < 128; i++) {
 		double hsv[3];
 
-		hsv[0] = i / 96.0 * 360;
+		hsv[0] = i / 128.0 * 360;
 		hsv[1] = 0.8;
 		hsv[2] = 1;
 
