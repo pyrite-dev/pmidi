@@ -14,7 +14,7 @@ class AudioPlayer {
 			const audioBuffer = audioContext.createBuffer(2, this.frames, rate);
 
 			if(!this.paused){
-				this.onbuffer(audioBuffer, frames);
+				this.onbuffer(audioBuffer, this.frames);
 			}
 
 			const currentSource = audioContext.createBufferSource();
@@ -36,7 +36,7 @@ class AudioPlayer {
 
 			currentSource.start(baseTime + samples / rate);
 
-			samples += frames;
+			samples += this.frames;
 		}
 
 		read();
