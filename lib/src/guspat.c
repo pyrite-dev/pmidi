@@ -573,6 +573,7 @@ void GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int dru
 	int bank;
 
 	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+	if(program < 0 && 0x80 <= program) return;
 
 	bank = (self->channels[channel].bankMsb << 7) | self->channels[channel].bankLsb;
 
@@ -582,6 +583,7 @@ void GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int dru
 
 void GUSPatSynth_SetBank(GUSPatSynth* self, int channel, int bank) {
 	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+	if(bank < 0 && 0x4000 <= bank) return;
 
 	if(getProgramSet(self, bank) != NULL) self->channels[channel].bank = bank;
 	self->channels[channel].bankMsb = (bank >> 7) & 0x7f;
@@ -590,12 +592,14 @@ void GUSPatSynth_SetBank(GUSPatSynth* self, int channel, int bank) {
 
 void GUSPatSynth_SetBankMSB(GUSPatSynth* self, int channel, int bank) {
 	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+	if(bank < 0 && 0x80 <= bank) return;
 
 	self->channels[channel].bankMsb = bank & 0x7f;
 }
 
 void GUSPatSynth_SetBankLSB(GUSPatSynth* self, int channel, int bank) {
 	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+	if(bank < 0 && 0x80 <= bank) return;
 
 	self->channels[channel].bankLsb = bank & 0x7f;
 }
