@@ -604,6 +604,15 @@ void GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int dru
 	self->channels[channel].program = (drum ? 0x80 : 0) | (program & 0x7f);
 }
 
+void GUSPatSynth_SetDrum(GUSPatSynth* self, int channel, int drum) {
+	int bank;
+
+	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+
+	self->channels[channel].program &= ~0x80;
+	if(drum) self->channels[channel].program |= 0x80;
+}
+
 void GUSPatSynth_ChangePitchWheel(GUSPatSynth* self, int channel, double semitone) {
 	int i;
 

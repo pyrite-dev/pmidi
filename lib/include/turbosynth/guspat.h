@@ -105,6 +105,7 @@ void	     GUSPatSynth_SetBank(GUSPatSynth* self, int channel, int bank); /* imme
 void	     GUSPatSynth_SetBankMSB(GUSPatSynth* self, int channel, int bank);
 void	     GUSPatSynth_SetBankLSB(GUSPatSynth* self, int channel, int bank);
 void	     GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int drum);
+void	     GUSPatSynth_SetDrum(GUSPatSynth* self, int channel, int drum);
 void	     GUSPatSynth_ChangePitchWheel(GUSPatSynth* self, int channel, double semitone);
 void	     GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames);
 void	     GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames);
