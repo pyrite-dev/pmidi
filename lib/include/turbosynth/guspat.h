@@ -76,6 +76,8 @@ struct GUSChannel {
 	int    bankLsb;
 	double pitchRatio;
 
+	int volume; /* 16.16 */
+
 	GUSVoice voices[GUSPATSYNTH_VOICES];
 };
 
@@ -107,6 +109,7 @@ void	     GUSPatSynth_SetBankLSB(GUSPatSynth* self, int channel, int bank);
 void	     GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int drum);
 void	     GUSPatSynth_SetDrum(GUSPatSynth* self, int channel, int drum);
 void	     GUSPatSynth_ChangePitchWheel(GUSPatSynth* self, int channel, double semitone);
+void	     GUSPatSynth_SetVolume(GUSPatSynth* self, int channel, double volume);
 void	     GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames);
 void	     GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames);
 void	     GUSPatSynth_Reset(GUSPatSynth* self);

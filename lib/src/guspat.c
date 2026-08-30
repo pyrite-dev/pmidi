@@ -625,6 +625,9 @@ void GUSPatSynth_ChangePitchWheel(GUSPatSynth* self, int channel, double semiton
 	}
 }
 
+void GUSPatSynth_SetVolume(GUSPatSynth* self, int channel, double volume) {
+}
+
 #define ENVELOPE \
 	{ \
 		int rel2 = voice->released && voice->envIndex == 2; \
@@ -692,8 +695,8 @@ void GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames) {
 	int* mix = calloc(frames * 2, sizeof(*mix));
 
 	RENDER({
-		mix[k * 2 + 0] += ((((int)wave[CH1] * voice->volume) >> 16) * voice->currentVolume) >> 16;
-		mix[k * 2 + 1] += ((((int)wave[CH2] * voice->volume) >> 16) * voice->currentVolume) >> 16;
+		mix[k * 2 + 0] += ((((((int)wave[CH1] * voice->volume) >> 16) * voice->currentVolume) >> 16) * channel->volume) >> 16;
+		mix[k * 2 + 1] += ((((((int)wave[CH2] * voice->volume) >> 16) * voice->currentVolume) >> 16) * channel->volume) >> 16;
 	});
 
 	for(i = 0; i < frames * 2; i++) {
@@ -712,8 +715,8 @@ void GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames) {
 	memset(output, 0, frames * 2 * sizeof(*output));
 
 	RENDER({
-		output[k * 2 + 0] += (float)wave[CH1] / 32767 * (voice->volume / 32768.0) * (voice->currentVolume / 32768.0);
-		output[k * 2 + 1] += (float)wave[CH2] / 32767 * (voice->volume / 32768.0) * (voice->currentVolume / 32768.0);
+		output[k * 2 + 0] += (float)wave[CH1] / 32767 * (voice->volume / 32768.0) * (voice->currentVolume / 32768.0) * (channel->volume / 32768.0);
+		output[k * 2 + 1] += (float)wave[CH2] / 32767 * (voice->volume / 32768.0) * (voice->currentVolume / 32768.0) * (channel->volume / 32768.0);
 	});
 
 	for(i = 0; i < frames * 2; i++) {
@@ -733,6 +736,7 @@ void GUSPatSynth_Reset(GUSPatSynth* self) {
 
 	for(i = 0; i < GUSPATSYNTH_CHANNELS; i++) {
 		self->channels[i].pitchRatio = 1;
+		self->channels[i].volume     = 0x10000;
 	}
 }
 
