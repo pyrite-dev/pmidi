@@ -63,6 +63,8 @@ function play(){
 		EasyMidi_Reset(EasyMidi);
 		if(!EasyMidi_Load(EasyMidi, "input.mid")) return;	
 		console.log("midi loaded");
+
+		player.pause();
 	}
 
 	if(!audioContext){
@@ -86,8 +88,6 @@ function play(){
 				rChannelData[i] = EasyMidi_Buffer[2 * i + 1];
 			}
 		};
-
-		player.resume();
 
 		document.getElementById("pause").disabled = false;
 	}
