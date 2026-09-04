@@ -90,13 +90,18 @@ int main(int argc, char** argv) {
 	ma_device	 device;
 	const char*	 cfg  = NULL;
 	const char*	 midi = NULL;
+	const char*	 wav  = NULL;
 	int		 i;
-	int		 miniaudio = 0;
-	int		 wave	   = 1;
+	int		 miniaudio = 1;
+	int		 wave	   = 0;
 
 	for(i = 1; i < argc; i++) {
 		if(strcmp(argv[i], "-C") == 0) {
-			cfg = argv[++i];
+			cfg = argv[i][2] == 0 ? argv[++i] : argv[i];
+		} else if(strcmp(argv[i], "-o") == 0) {
+			wav	  = argv[i][2] == 0 ? argv[++i] : argv[i];
+			wave	  = 1;
+			miniaudio = 0;
 		} else if(argv[i][0] == '-') {
 		} else {
 			midi = argv[i];
@@ -183,7 +188,7 @@ int main(int argc, char** argv) {
 		while(bufferSize() > 0);
 
 	if(wave) {
-		FILE* out     = fopen("output.wav", "wb");
+		FILE* out     = fopen(wav, "wb");
 		int   samples = arrlen(gBuffer) * BUFSZ;
 		int   i;
 
