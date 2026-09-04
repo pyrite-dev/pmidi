@@ -100,10 +100,10 @@ static unsigned int keyFrequency(int note) {
 
 WaveSynth* WaveSynth_New(FileStream* fs, int rate) {
 	WaveSynth* self = calloc(1, sizeof(*self));
-	char	     line[LINESZ + 1];
-	char	     c[2];
-	int	     comment = 0;
-	int	     num     = -1; /* -1 to ignore numbers */
+	char	   line[LINESZ + 1];
+	char	   c[2];
+	int	   comment = 0;
+	int	   num	   = -1; /* -1 to ignore numbers */
 
 	self->rate = rate;
 
@@ -504,8 +504,8 @@ void WaveSynth_Note(WaveSynth* self, int channel, int key, int velocity) {
 		for(i = 0; i < WAVESYNTH_VOICES && (voice = &self->channels[channel].voices[i])->used; i++);
 
 		if(i < WAVESYNTH_VOICES) {
-			int	       drum = self->channels[channel].program >= 0x80;
-			int	       bank = self->channels[channel].bank;
+			int	      drum = self->channels[channel].program >= 0x80;
+			int	      bank = self->channels[channel].bank;
 			WSProgramSet* ps;
 			WSProgram*    prog;
 
@@ -680,7 +680,7 @@ void WaveSynth_SetVolumeLSB(WaveSynth* self, int channel, int volume) {
 		WSChannel* channel = &self->channels[i]; \
 \
 		for(j = 0; j < WAVESYNTH_VOICES; j++) { \
-			WSVoice*  voice  = &channel->voices[j]; \
+			WSVoice*  voice	 = &channel->voices[j]; \
 			WSSample* sample = voice->sample; \
 \
 			if(!voice->used) continue; \

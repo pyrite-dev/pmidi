@@ -61,28 +61,54 @@ static void dataCallback(ma_device* device, void* output, const void* input, ma_
 	}
 }
 
+void write16(FILE* f, unsigned short n) {
+	int	      i;
+	unsigned char c;
+
+	for(i = 0; i < sizeof(n); i++) {
+		c = n & 0xff;
+		n = n >> 8;
+
+		fwrite(&c, 1, 1, f);
+	}
+}
+
+void write32(FILE* f, unsigned int n) {
+	int	      i;
+	unsigned char c;
+
+	for(i = 0; i < sizeof(n); i++) {
+		c = n & 0xff;
+		n = n >> 8;
+
+		fwrite(&c, 1, 1, f);
+	}
+}
+
 int main(int argc, char** argv) {
 	ma_device_config config;
 	ma_device	 device;
-	const char* cfg = NULL;
-	const char* midi = NULL;
-	int i;
+	const char*	 cfg  = NULL;
+	const char*	 midi = NULL;
+	int		 i;
+	int		 miniaudio = 0;
+	int		 wave	   = 1;
 
-	for(i = 1; i < argc; i++){
-		if(strcmp(argv[i], "-C") == 0){
+	for(i = 1; i < argc; i++) {
+		if(strcmp(argv[i], "-C") == 0) {
 			cfg = argv[++i];
-		}else if(argv[i][0] == '-'){
-		}else{
+		} else if(argv[i][0] == '-') {
+		} else {
 			midi = argv[i];
 		}
 	}
 
-	if(cfg == NULL){
+	if(cfg == NULL) {
 		fprintf(stderr, "specify config file\n");
 		return 1;
 	}
 
-	if(midi == NULL){
+	if(midi == NULL) {
 		fprintf(stderr, "specify midi file\n");
 		return 1;
 	}
@@ -99,29 +125,31 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	config			 = ma_device_config_init(ma_device_type_playback);
-	config.playback.format	 = ma_format_s16;
-	config.playback.channels = 2;
-	config.sampleRate	 = RATE;
-	config.dataCallback	 = dataCallback;
-	config.pUserData	 = NULL;
+	if(miniaudio) {
+		config			 = ma_device_config_init(ma_device_type_playback);
+		config.playback.format	 = ma_format_s16;
+		config.playback.channels = 2;
+		config.sampleRate	 = RATE;
+		config.dataCallback	 = dataCallback;
+		config.pUserData	 = NULL;
 
-	if(ma_device_init(NULL, &config, &device) != MA_SUCCESS) {
-		EasyMidi_Destroy(gEasyMidi);
+		if(ma_device_init(NULL, &config, &device) != MA_SUCCESS) {
+			EasyMidi_Destroy(gEasyMidi);
 
-		fprintf(stderr, "cannot open audio\n");
-		return 1;
+			fprintf(stderr, "cannot open audio\n");
+			return 1;
+		}
+
+		if(ma_device_start(&device) != MA_SUCCESS) {
+			ma_device_uninit(&device);
+			EasyMidi_Destroy(gEasyMidi);
+
+			fprintf(stderr, "cannot open audio\n");
+			return 1;
+		}
+
+		ma_mutex_init(&gBufferMutex);
 	}
-
-	if(ma_device_start(&device) != MA_SUCCESS) {
-		ma_device_uninit(&device);
-		EasyMidi_Destroy(gEasyMidi);
-
-		fprintf(stderr, "cannot open audio\n");
-		return 1;
-	}
-
-	ma_mutex_init(&gBufferMutex);
 
 	while(1) {
 		buffer_t buffer = {0};
@@ -131,23 +159,66 @@ int main(int argc, char** argv) {
 
 		render(buffer.buffer, BUFSZ);
 
-		ma_mutex_lock(&gBufferMutex);
-		arrput(gBuffer, buffer);
-		ma_mutex_unlock(&gBufferMutex);
+		if(miniaudio) {
+			ma_mutex_lock(&gBufferMutex);
+			arrput(gBuffer, buffer);
+			ma_mutex_unlock(&gBufferMutex);
 
-		while(bufferSize() > RATE / 10)
+			while(bufferSize() > RATE / 10)
 #ifdef _WIN32
-			Sleep(1);
+				Sleep(1);
 #else
-			usleep(1000);
+				usleep(1000);
 #endif
+		}
+		if(wave) {
+			printf("%d seconds rendered\r", arrlen(gBuffer) * BUFSZ / RATE);
+			fflush(stdout);
+
+			arrput(gBuffer, buffer);
+		}
 	}
 
-	while(bufferSize() > 0);
+	if(miniaudio)
+		while(bufferSize() > 0);
+
+	if(wave) {
+		FILE* out     = fopen("output.wav", "wb");
+		int   samples = arrlen(gBuffer) * BUFSZ;
+		int   i;
+
+		printf("\n");
+
+		fwrite("RIFF", 1, 4, out);
+		write32(out, 4 + (8 + 16) + (8 + samples * 2 * 2));
+		fwrite("WAVE", 1, 4, out);
+		fwrite("fmt ", 1, 4, out);
+		write32(out, 16);
+		write16(out, 1);
+		write16(out, 2);
+		write32(out, RATE);
+		write32(out, RATE * 2 * 2);
+		write16(out, 2 * 2);
+		write16(out, 16);
+		fwrite("data", 1, 4, out);
+		write32(out, samples * 2 * 2);
+
+		for(i = 0; i < arrlen(gBuffer); i++) {
+			int j;
+
+			for(j = 0; j < BUFSZ * 2; j++) {
+				write16(out, gBuffer[i].buffer[j]);
+			}
+		}
+
+		fclose(out);
+	}
 
 quit:;
-	ma_mutex_uninit(&gBufferMutex);
-	ma_device_uninit(&device);
+	if(miniaudio) {
+		ma_mutex_uninit(&gBufferMutex);
+		ma_device_uninit(&device);
+	}
 	EasyMidi_Destroy(gEasyMidi);
 
 	arrfree(gBuffer);
