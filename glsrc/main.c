@@ -1,5 +1,5 @@
 #include <turbosynth/midi.h>
-#include <turbosynth/guspat.h>
+#include <turbosynth/wavesynth.h>
 #include <turbosynth/easymidi.h>
 
 #include <SDL.h>
@@ -8,7 +8,7 @@
 #define BUFSZ 800
 #define BUFFERS 10
 #define FACTOR 4
-#define VOICES (GUSPATSYNTH_VOICES * 16) / FACTOR
+#define VOICES (WAVESYNTH_VOICES * 16) / FACTOR
 
 typedef struct voice   voice_t;
 typedef struct channel channel_t;

@@ -64,18 +64,35 @@ static void dataCallback(ma_device* device, void* output, const void* input, ma_
 int main(int argc, char** argv) {
 	ma_device_config config;
 	ma_device	 device;
+	const char* cfg = NULL;
+	const char* midi = NULL;
+	int i;
 
-	if(argc != 3) {
-		fprintf(stderr, "Usage: %s cfg midi\n", argv[0]);
+	for(i = 1; i < argc; i++){
+		if(strcmp(argv[i], "-C") == 0){
+			cfg = argv[++i];
+		}else if(argv[i][0] == '-'){
+		}else{
+			midi = argv[i];
+		}
+	}
+
+	if(cfg == NULL){
+		fprintf(stderr, "specify config file\n");
 		return 1;
 	}
 
-	if((gEasyMidi = EasyMidi_New(argv[1], RATE)) == NULL) {
+	if(midi == NULL){
+		fprintf(stderr, "specify midi file\n");
+		return 1;
+	}
+
+	if((gEasyMidi = EasyMidi_New(cfg, RATE)) == NULL) {
 		fprintf(stderr, "cannot open gus patches\n");
 		return 1;
 	}
 
-	if(!EasyMidi_Load(gEasyMidi, argv[2])) {
+	if(!EasyMidi_Load(gEasyMidi, midi)) {
 		EasyMidi_Destroy(gEasyMidi);
 
 		fprintf(stderr, "cannot open midi\n");

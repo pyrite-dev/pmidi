@@ -3,7 +3,7 @@
 
 #include <turbosynth/fs.h>
 #include <turbosynth/midi.h>
-#include <turbosynth/guspat.h>
+#include <turbosynth/wavesynth.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -17,7 +17,7 @@ struct EasyMidi {
 	MidiStream* ms;
 	FileStream* fs;
 
-	GUSPatSynth* synth;
+	WaveSynth* synth;
 };
 
 #ifdef __cplusplus
@@ -26,7 +26,7 @@ extern "C" {
 
 EasyMidi* EasyMidi_New(const char* cfg, int rate);
 EasyMidi* EasyMidi_New2(FileStream* cfg, int rate);
-void	  EasyMidi_MidiCallback(MidiStream* ms, const MidiEvent* event); /* you may use this with self->user pointed at GUSPatSynth* */
+void	  EasyMidi_MidiCallback(MidiStream* ms, const MidiEvent* event); /* you may use this with self->user pointed at WaveSynth* */
 int	  EasyMidi_Load(EasyMidi* self, const char* midi);
 int	  EasyMidi_Load2(EasyMidi* self, FileStream* midi);
 int	  EasyMidi_IsFinished(EasyMidi* self);

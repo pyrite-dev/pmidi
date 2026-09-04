@@ -1,4 +1,4 @@
-#include <turbosynth/guspat.h>
+#include <turbosynth/wavesynth.h>
 
 #define LINESZ 1024
 #define TOL 0
@@ -98,8 +98,8 @@ static unsigned int keyFrequency(int note) {
 	return freqTable[note];
 }
 
-GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate) {
-	GUSPatSynth* self = calloc(1, sizeof(*self));
+WaveSynth* WaveSynth_New(FileStream* fs, int rate) {
+	WaveSynth* self = calloc(1, sizeof(*self));
 	char	     line[LINESZ + 1];
 	char	     c[2];
 	int	     comment = 0;
@@ -162,12 +162,12 @@ GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate) {
 							}
 
 							if((patch = fs->New(arg1, fs->newArg)) != NULL || (patch = fs->New(patchpath, fs->newArg)) != NULL || (patch = fs->New(patchpath2, fs->newArg)) != NULL || (patch = fs->New(patchpath3, fs->newArg)) != NULL) {
-								if(!GUSPatSynth_Load(self, num & 0xff, program, num & (1 << 8), patch)) {
+								if(!WaveSynth_Load(self, num & 0xff, program, num & (1 << 8), patch)) {
 									FileStream_Destroy(patch);
 									free(patchpath3);
 									free(patchpath2);
 									free(patchpath);
-									GUSPatSynth_Destroy(self);
+									WaveSynth_Destroy(self);
 
 									return NULL;
 								}
@@ -180,7 +180,7 @@ GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate) {
 								free(patchpath3);
 								free(patchpath2);
 								free(patchpath);
-								GUSPatSynth_Destroy(self);
+								WaveSynth_Destroy(self);
 
 								return NULL;
 							}
@@ -217,12 +217,12 @@ GUSPatSynth* GUSPatSynth_New(FileStream* fs, int rate) {
 		}
 	}
 
-	GUSPatSynth_Reset(self);
+	WaveSynth_Reset(self);
 
 	return self;
 }
 
-static void loadSample(GUSSample* sample, FileStream* fs, int patchChannels, int rate) {
+static void loadSample(WSSample* sample, FileStream* fs, int patchChannels, int rate) {
 	unsigned int	waveSize;
 	int		balance;
 	unsigned int	sampleRate;
@@ -374,7 +374,7 @@ static void loadSample(GUSSample* sample, FileStream* fs, int patchChannels, int
 	free(wave);
 }
 
-static int loadPatch(GUSProgram* prog, FileStream* fs, int rate) {
+static int loadPatch(WSProgram* prog, FileStream* fs, int rate) {
 	char buffer[64]; /* enough for temporary buffer */
 	int  i, j;
 	int  instruments;
@@ -440,7 +440,7 @@ static int loadPatch(GUSProgram* prog, FileStream* fs, int rate) {
 	return 1;
 }
 
-static void unloadPatch(GUSProgram* prog) {
+static void unloadPatch(WSProgram* prog) {
 	prog->used = 0;
 
 	if(prog->samples != NULL) {
@@ -455,21 +455,21 @@ static void unloadPatch(GUSProgram* prog) {
 	}
 }
 
-static GUSProgramSet* getProgramSet(GUSPatSynth* self, int bank) {
+static WSProgramSet* getProgramSet(WaveSynth* self, int bank) {
 	if(!self->bank.indices[bank]) return NULL;
 
 	return &self->bank.sets[self->bank.indices[bank] - 1];
 }
 
-int GUSPatSynth_Load(GUSPatSynth* self, int bank, int program, int drum, FileStream* fs) {
-	GUSProgramSet* ps = getProgramSet(self, bank);
+int WaveSynth_Load(WaveSynth* self, int bank, int program, int drum, FileStream* fs) {
+	WSProgramSet* ps = getProgramSet(self, bank);
 
-	if((*ps)[(drum ? 0x80 : 0) | program].used) GUSPatSynth_Unload(self, bank, program, drum);
+	if((*ps)[(drum ? 0x80 : 0) | program].used) WaveSynth_Unload(self, bank, program, drum);
 	return loadPatch(&(*ps)[(drum ? 0x80 : 0) | program], fs, self->rate);
 }
 
-void GUSPatSynth_Unload(GUSPatSynth* self, int bank, int program, int drum) {
-	GUSProgramSet* ps = getProgramSet(self, bank);
+void WaveSynth_Unload(WaveSynth* self, int bank, int program, int drum) {
+	WSProgramSet* ps = getProgramSet(self, bank);
 
 	unloadPatch(&(*ps)[(drum ? 0x80 : 0) | program]);
 }
@@ -484,14 +484,14 @@ void GUSPatSynth_Unload(GUSPatSynth* self, int bank, int program, int drum) {
 		voice->envIndex = 2; \
 	}
 
-void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
+void WaveSynth_Note(WaveSynth* self, int channel, int key, int velocity) {
 	int i;
 
-	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+	if(channel < 0 && WAVESYNTH_CHANNELS <= channel) return;
 
 	if(velocity == 0) {
-		for(i = 0; i < GUSPATSYNTH_VOICES; i++) {
-			GUSVoice* voice = &self->channels[channel].voices[i];
+		for(i = 0; i < WAVESYNTH_VOICES; i++) {
+			WSVoice* voice = &self->channels[channel].voices[i];
 			if(!voice->used || voice->released) continue;
 
 			if(voice->key == key) {
@@ -499,15 +499,15 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 			}
 		}
 	} else {
-		GUSVoice* voice;
+		WSVoice* voice;
 
-		for(i = 0; i < GUSPATSYNTH_VOICES && (voice = &self->channels[channel].voices[i])->used; i++);
+		for(i = 0; i < WAVESYNTH_VOICES && (voice = &self->channels[channel].voices[i])->used; i++);
 
-		if(i < GUSPATSYNTH_VOICES) {
+		if(i < WAVESYNTH_VOICES) {
 			int	       drum = self->channels[channel].program >= 0x80;
 			int	       bank = self->channels[channel].bank;
-			GUSProgramSet* ps;
-			GUSProgram*    prog;
+			WSProgramSet* ps;
+			WSProgram*    prog;
 
 		retry:;
 			ps   = getProgramSet(self, bank);
@@ -530,7 +530,7 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 				int freq = keyFrequency(key);
 
 				for(i = 0; i < prog->nSamples; i++) {
-					GUSSample* sample = &prog->samples[i];
+					WSSample* sample = &prog->samples[i];
 
 					if(drum || (sample->lowFrequency <= (freq + TOL) && freq <= (sample->highFrequency + TOL))) {
 						voice->sample	     = sample;
@@ -556,21 +556,21 @@ void GUSPatSynth_Note(GUSPatSynth* self, int channel, int key, int velocity) {
 	}
 }
 
-void GUSPatSynth_NoteOffAll(GUSPatSynth* self, int channel) {
+void WaveSynth_NoteOffAll(WaveSynth* self, int channel) {
 	int i;
 
-	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+	if(channel < 0 && WAVESYNTH_CHANNELS <= channel) return;
 
-	for(i = 0; i < GUSPATSYNTH_VOICES; i++) {
-		GUSVoice* voice = &self->channels[channel].voices[i];
+	for(i = 0; i < WAVESYNTH_VOICES; i++) {
+		WSVoice* voice = &self->channels[channel].voices[i];
 		if(!voice->used || voice->released) continue;
 
 		NOTE_OFF(voice);
 	}
 }
 
-void GUSPatSynth_SetBank(GUSPatSynth* self, int channel, int bank) {
-	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+void WaveSynth_SetBank(WaveSynth* self, int channel, int bank) {
+	if(channel < 0 && WAVESYNTH_CHANNELS <= channel) return;
 	if(bank < 0 && 0x4000 <= bank) return;
 
 	if(getProgramSet(self, bank) != NULL) self->channels[channel].bank = bank;
@@ -578,68 +578,68 @@ void GUSPatSynth_SetBank(GUSPatSynth* self, int channel, int bank) {
 	self->channels[channel].bankLsb = bank & 0x7f;
 }
 
-void GUSPatSynth_SetBankMSB(GUSPatSynth* self, int channel, int bank) {
-	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+void WaveSynth_SetBankMSB(WaveSynth* self, int channel, int bank) {
+	if(channel < 0 && WAVESYNTH_CHANNELS <= channel) return;
 	if(bank < 0 && 0x80 <= bank) return;
 
 	self->channels[channel].bankMsb = bank & 0x7f;
 }
 
-void GUSPatSynth_SetBankLSB(GUSPatSynth* self, int channel, int bank) {
-	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+void WaveSynth_SetBankLSB(WaveSynth* self, int channel, int bank) {
+	if(channel < 0 && WAVESYNTH_CHANNELS <= channel) return;
 	if(bank < 0 && 0x80 <= bank) return;
 
 	self->channels[channel].bankLsb = bank & 0x7f;
 }
 
-void GUSPatSynth_SetProgram(GUSPatSynth* self, int channel, int program, int drum) {
+void WaveSynth_SetProgram(WaveSynth* self, int channel, int program, int drum) {
 	int bank;
 
-	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+	if(channel < 0 && WAVESYNTH_CHANNELS <= channel) return;
 	if(program < 0 && 0x80 <= program) return;
 
 	bank = (self->channels[channel].bankMsb << 7) | self->channels[channel].bankLsb;
 
-	GUSPatSynth_SetBank(self, channel, bank);
+	WaveSynth_SetBank(self, channel, bank);
 	self->channels[channel].program = (drum ? 0x80 : 0) | (program & 0x7f);
 }
 
-void GUSPatSynth_SetDrum(GUSPatSynth* self, int channel, int drum) {
+void WaveSynth_SetDrum(WaveSynth* self, int channel, int drum) {
 	int bank;
 
-	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+	if(channel < 0 && WAVESYNTH_CHANNELS <= channel) return;
 
 	self->channels[channel].program &= ~0x80;
 	if(drum) self->channels[channel].program |= 0x80;
 }
 
-void GUSPatSynth_ChangePitchWheel(GUSPatSynth* self, int channel, double semitone) {
+void WaveSynth_ChangePitchWheel(WaveSynth* self, int channel, double semitone) {
 	int i;
 
-	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+	if(channel < 0 && WAVESYNTH_CHANNELS <= channel) return;
 
 	self->channels[channel].pitchRatio = pow(2, semitone / 12);
 
-	for(i = 0; i < GUSPATSYNTH_VOICES; i++) {
+	for(i = 0; i < WAVESYNTH_VOICES; i++) {
 		self->channels[channel].voices[i].step = self->channels[channel].voices[i].baseStep * self->channels[channel].pitchRatio;
 	}
 }
 
-void GUSPatSynth_SetVolume(GUSPatSynth* self, int channel, double volume) {
-	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+void WaveSynth_SetVolume(WaveSynth* self, int channel, double volume) {
+	if(channel < 0 && WAVESYNTH_CHANNELS <= channel) return;
 
 	self->channels[channel].volume = volume * 0x8000;
 }
 
-void GUSPatSynth_SetVolumeMSB(GUSPatSynth* self, int channel, int volume) {
-	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+void WaveSynth_SetVolumeMSB(WaveSynth* self, int channel, int volume) {
+	if(channel < 0 && WAVESYNTH_CHANNELS <= channel) return;
 
 	self->channels[channel].volume &= 0x3f80;
 	self->channels[channel].volume &= (volume & 0x7f) << 7;
 }
 
-void GUSPatSynth_SetVolumeLSB(GUSPatSynth* self, int channel, int volume) {
-	if(channel < 0 && GUSPATSYNTH_CHANNELS <= channel) return;
+void WaveSynth_SetVolumeLSB(WaveSynth* self, int channel, int volume) {
+	if(channel < 0 && WAVESYNTH_CHANNELS <= channel) return;
 
 	self->channels[channel].volume &= 0x7f;
 	self->channels[channel].volume |= volume & 0x7f;
@@ -676,12 +676,12 @@ void GUSPatSynth_SetVolumeLSB(GUSPatSynth* self, int channel, int volume) {
 \
 	memset(output, 0, frames * 2 * sizeof(*output)); \
 \
-	for(i = 0; i < GUSPATSYNTH_CHANNELS; i++) { \
-		GUSChannel* channel = &self->channels[i]; \
+	for(i = 0; i < WAVESYNTH_CHANNELS; i++) { \
+		WSChannel* channel = &self->channels[i]; \
 \
-		for(j = 0; j < GUSPATSYNTH_VOICES; j++) { \
-			GUSVoice*  voice  = &channel->voices[j]; \
-			GUSSample* sample = voice->sample; \
+		for(j = 0; j < WAVESYNTH_VOICES; j++) { \
+			WSVoice*  voice  = &channel->voices[j]; \
+			WSSample* sample = voice->sample; \
 \
 			if(!voice->used) continue; \
 \
@@ -708,7 +708,7 @@ void GUSPatSynth_SetVolumeLSB(GUSPatSynth* self, int channel, int volume) {
 		} \
 	}
 
-void GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames) {
+void WaveSynth_RenderShort(WaveSynth* self, short* output, int frames) {
 	int* mix = calloc(frames * 2, sizeof(*mix));
 
 	RENDER({
@@ -728,7 +728,7 @@ void GUSPatSynth_RenderShort(GUSPatSynth* self, short* output, int frames) {
 	free(mix);
 }
 
-void GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames) {
+void WaveSynth_RenderFloat(WaveSynth* self, float* output, int frames) {
 	memset(output, 0, frames * 2 * sizeof(*output));
 
 	RENDER({
@@ -746,25 +746,25 @@ void GUSPatSynth_RenderFloat(GUSPatSynth* self, float* output, int frames) {
 	}
 }
 
-void GUSPatSynth_Reset(GUSPatSynth* self) {
+void WaveSynth_Reset(WaveSynth* self) {
 	int i;
 
 	memset(self->channels, 0, sizeof(self->channels));
 
-	for(i = 0; i < GUSPATSYNTH_CHANNELS; i++) {
+	for(i = 0; i < WAVESYNTH_CHANNELS; i++) {
 		self->channels[i].pitchRatio = 1;
 		self->channels[i].volume     = 0x3fff;
 	}
 }
 
-void GUSPatSynth_Destroy(GUSPatSynth* self) {
+void WaveSynth_Destroy(WaveSynth* self) {
 	int i, j, k;
 
 	for(i = 0; i < 128; i++) {
 		if(getProgramSet(self, i) == NULL) continue;
 
 		for(j = 0; j < 2; j++) {
-			for(k = 0; k < 128; k++) GUSPatSynth_Unload(self, i, k, j);
+			for(k = 0; k < 128; k++) WaveSynth_Unload(self, i, k, j);
 		}
 	}
 

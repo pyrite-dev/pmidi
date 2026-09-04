@@ -18,7 +18,7 @@ EasyMidi* EasyMidi_New2(FileStream* cfg, int rate) {
 
 	self->rate = rate;
 
-	if((self->synth = GUSPatSynth_New(cfg, rate)) == NULL) {
+	if((self->synth = WaveSynth_New(cfg, rate)) == NULL) {
 		free(self);
 
 		return NULL;
@@ -28,28 +28,28 @@ EasyMidi* EasyMidi_New2(FileStream* cfg, int rate) {
 }
 
 void EasyMidi_MidiCallback(MidiStream* ms, const MidiEvent* event) {
-	GUSPatSynth* synth = ms->user;
+	WaveSynth* synth = ms->user;
 
 	if(event->type == MidiEventNote) {
-		GUSPatSynth_Note(synth, event->note.channel, event->note.key, event->note.velocity);
+		WaveSynth_Note(synth, event->note.channel, event->note.key, event->note.velocity);
 	} else if(event->type == MidiEventControl) {
 		if(event->control.key == MidiControlBankSelectMSB) {
-			GUSPatSynth_SetBankMSB(synth, event->control.channel, event->control.value);
+			WaveSynth_SetBankMSB(synth, event->control.channel, event->control.value);
 		} else if(event->control.key == MidiControlBankSelectLSB) {
-			GUSPatSynth_SetBankLSB(synth, event->control.channel, event->control.value);
+			WaveSynth_SetBankLSB(synth, event->control.channel, event->control.value);
 		} else if(event->control.key == MidiControlChannelVolumeMSB) {
-			GUSPatSynth_SetVolumeMSB(synth, event->control.channel, event->control.value);
+			WaveSynth_SetVolumeMSB(synth, event->control.channel, event->control.value);
 		} else if(event->control.key == MidiControlChannelVolumeLSB) {
-			GUSPatSynth_SetVolumeLSB(synth, event->control.channel, event->control.value);
+			WaveSynth_SetVolumeLSB(synth, event->control.channel, event->control.value);
 		}
 	} else if(event->type == MidiEventProgramChange) {
 		int drum = 0;
 
 		if(synth->channels[event->programChange.channel].bankMsb == 120 || event->programChange.channel == 9) drum = 1;
 
-		GUSPatSynth_SetProgram(synth, event->programChange.channel, event->programChange.program, drum);
+		WaveSynth_SetProgram(synth, event->programChange.channel, event->programChange.program, drum);
 	} else if(event->type == MidiEventPitchWheelChange) {
-		GUSPatSynth_ChangePitchWheel(synth, event->pitchWheelChange.channel, event->pitchWheelChange.semitone);
+		WaveSynth_ChangePitchWheel(synth, event->pitchWheelChange.channel, event->pitchWheelChange.semitone);
 	}
 }
 
@@ -96,21 +96,21 @@ int EasyMidi_IsFinished(EasyMidi* self) {
 
 void EasyMidi_RenderShort(EasyMidi* self, short* frames, int nFrames) {
 	if(self->ms != NULL) MidiStream_Advance(self->ms, (double)nFrames / self->rate);
-	GUSPatSynth_RenderShort(self->synth, frames, nFrames);
+	WaveSynth_RenderShort(self->synth, frames, nFrames);
 }
 
 void EasyMidi_RenderFloat(EasyMidi* self, float* frames, int nFrames) {
 	if(self->ms != NULL) MidiStream_Advance(self->ms, (double)nFrames / self->rate);
-	GUSPatSynth_RenderFloat(self->synth, frames, nFrames);
+	WaveSynth_RenderFloat(self->synth, frames, nFrames);
 }
 
 void EasyMidi_Reset(EasyMidi* self) {
-	GUSPatSynth_Reset(self->synth);
+	WaveSynth_Reset(self->synth);
 }
 
 void EasyMidi_Destroy(EasyMidi* self) {
 	if(self->ms != NULL) MidiStream_Destroy(self->ms);
 	if(self->fs != NULL) FileStream_Destroy(self->fs);
-	GUSPatSynth_Destroy(self->synth);
+	WaveSynth_Destroy(self->synth);
 	free(self);
 }
