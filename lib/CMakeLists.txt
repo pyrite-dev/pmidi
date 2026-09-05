@@ -15,7 +15,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
 	set(FS_SYMS "'_FileStream_New', '_FileStream_Destroy'")
 	set(MIDI_SYMS "'_MidiStream_New', '_MidiStream_Advance', '_MidiStream_Destroy'")
 	set(WAVESYNTH_SYMS "'_WaveSynth_New', '_WaveSynth_Load', '_WaveSynth_Unload', '_WaveSynth_Note', '_WaveSynth_NoteOffAll', '_WaveSynth_SetBank', '_WaveSynth_SetBankMSB', '_WaveSynth_SetBankLSB', '_WaveSynth_SetProgram', '_WaveSynth_SetDrum', '_WaveSynth_ChangePitchWheel', '_WaveSynth_SetVolume', '_WaveSynth_SetVolumeMSB', '_WaveSynth_SetVolumeLSB', '_WaveSynth_RenderShort', '_WaveSynth_RenderFloat', '_WaveSynth_Reset', '_WaveSynth_Destroy'")
-	set(EASYMIDI_SYMS "'_EasyMidi_New', '_EasyMidi_New2', '_EasyMidi_MidiCallback', '_EasyMidi_Load', '_EasyMidi_Load2', '_EasyMidi_IsFinished', '_EasyMidi_RenderShort', '_EasyMidi_RenderFloat', '_EasyMidi_Reset', '_EasyMidi_Destroy'")
+	set(EASYMIDI_SYMS "'_EasyMidi_New', '_EasyMidi_New2', '_EasyMidi_GetSynth', '_EasyMidi_MidiCallback', '_EasyMidi_MidiHandler', '_EasyMidi_Load', '_EasyMidi_Load2', '_EasyMidi_IsFinished', '_EasyMidi_RenderShort', '_EasyMidi_RenderFloat', '_EasyMidi_Reset', '_EasyMidi_Destroy'")
 	add_executable(turbosynthwasm turbosynthwasm.c)
 	target_link_options(turbosynthwasm PRIVATE
 		"-sWASM=1"

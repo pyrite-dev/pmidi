@@ -27,29 +27,35 @@ EasyMidi* EasyMidi_New2(FileStream* cfg, int rate) {
 	return self;
 }
 
-void EasyMidi_MidiCallback(MidiStream* ms, const MidiEvent* event) {
-	WaveSynth* synth = ms->user;
+WaveSynth* EasyMidi_GetSynth(EasyMidi* self) {
+	return self->synth;
+}
 
+void EasyMidi_MidiCallback(MidiStream* ms, const MidiEvent* event) {
+	EasyMidi_MidiHandler(ms->user, event);
+}
+
+void EasyMidi_MidiHandler(WaveSynth* ws, const MidiEvent* event) {
 	if(event->type == MidiEventNote) {
-		WaveSynth_Note(synth, event->note.channel, event->note.key, event->note.velocity);
+		WaveSynth_Note(ws, event->note.channel, event->note.key, event->note.velocity);
 	} else if(event->type == MidiEventControl) {
 		if(event->control.key == MidiControlBankSelectMSB) {
-			WaveSynth_SetBankMSB(synth, event->control.channel, event->control.value);
+			WaveSynth_SetBankMSB(ws, event->control.channel, event->control.value);
 		} else if(event->control.key == MidiControlBankSelectLSB) {
-			WaveSynth_SetBankLSB(synth, event->control.channel, event->control.value);
+			WaveSynth_SetBankLSB(ws, event->control.channel, event->control.value);
 		} else if(event->control.key == MidiControlChannelVolumeMSB) {
-			WaveSynth_SetVolumeMSB(synth, event->control.channel, event->control.value);
+			WaveSynth_SetVolumeMSB(ws, event->control.channel, event->control.value);
 		} else if(event->control.key == MidiControlChannelVolumeLSB) {
-			WaveSynth_SetVolumeLSB(synth, event->control.channel, event->control.value);
+			WaveSynth_SetVolumeLSB(ws, event->control.channel, event->control.value);
 		}
 	} else if(event->type == MidiEventProgramChange) {
 		int drum = 0;
 
-		if(synth->channels[event->programChange.channel].bankMsb == 120 || event->programChange.channel == 9) drum = 1;
+		if(ws->channels[event->programChange.channel].bankMsb == 120 || event->programChange.channel == 9) drum = 1;
 
-		WaveSynth_SetProgram(synth, event->programChange.channel, event->programChange.program, drum);
+		WaveSynth_SetProgram(ws, event->programChange.channel, event->programChange.program, drum);
 	} else if(event->type == MidiEventPitchWheelChange) {
-		WaveSynth_ChangePitchWheel(synth, event->pitchWheelChange.channel, event->pitchWheelChange.semitone);
+		WaveSynth_ChangePitchWheel(ws, event->pitchWheelChange.channel, event->pitchWheelChange.semitone);
 	}
 }
 
