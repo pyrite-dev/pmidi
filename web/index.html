@@ -22,9 +22,27 @@ var audioContext;
 
 var player;
 
-window.onload = async function(){
+async function load(){
 	document.getElementById("play").disabled = true;
 	document.getElementById("pause").disabled = true;
+
+	if(player && !player.onended){
+		player.onended = load;
+
+		player.shutdown();
+
+		return;
+	}else if(player){
+		player.pause();
+		player = null;
+		audioContext = null;
+	}
+
+	if(EasyMidi_BufferPointer){
+		TurboSynth._free(EasyMidi_BufferPointer);
+		EasyMidi_BufferPointer = null;
+		EasyMidi_Destroy(EasyMidi);
+	}
 
 	TurboSynth = await TurboSynthWASM();
 
@@ -35,7 +53,7 @@ window.onload = async function(){
 	EasyMidi_Reset = TurboSynth.cwrap("EasyMidi_Reset", null, ["number"]);
 	EasyMidi_Destroy = TurboSynth.cwrap("EasyMidi_Destroy", null, ["number"]);
 
-	const zip = await JSZip.loadAsync(await (await fetch("florestan.zip")).arrayBuffer());
+	const zip = await JSZip.loadAsync(await (await fetch(document.getElementById("soundfont").value)).arrayBuffer());
 
 	for(let i of Object.keys(zip.files)){
 		if(zip.files[i].dir){
@@ -46,15 +64,17 @@ window.onload = async function(){
 		console.log("loaded " + i);
 	}
 
-	defaultMidi = await (await fetch("shanghai.mid")).arrayBuffer();
+	if(!defaultMidi) defaultMidi = await (await fetch("shanghai.mid")).arrayBuffer();
 
 	TurboSynth.FS.writeFile("input.mid", defaultMidi);
 
-	if((EasyMidi = EasyMidi_New("florestan.cfg", 44100)) == 0) return;	
+	if((EasyMidi = EasyMidi_New(Object.keys(zip.files).find(x=>x.endsWith(".cfg")), 44100)) == 0) return;	
 	console.log("synthesizer loaded");
 
 	document.getElementById("play").disabled = false;
 };
+
+window.onload = load;
 
 function play(){
 	const file = document.getElementById("file");
@@ -125,6 +145,15 @@ setInterval(()=>{
 			<input type="file" id="file" accept=".mid">
 			<input type="button" value="Play" onclick="play()" id="play">
 			<input type="button" value="Pause" onclick="pause()" id="pause">
+			<input type="button" value="Clear" onclick="document.getElementById('file').value = ''">
+		</p>
+		<p>
+			Soundfont:
+			<select id="soundfont" onchange="load()">
+				<option value="florestan.zip">Florestan</option>
+				<option value="sc55.zip">SC55 (Missing on some servers)</option>
+				<option value="ct2mgm.zip">CT2MGM (Missing on some servers)</option>
+			</select>
 		</p>
 		<p>
 			<input type="checkbox" name="loop" id="loop">
