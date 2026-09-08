@@ -149,7 +149,7 @@ function pause(){
 	player.paused = !player.paused;
 }
 
-function kbd(){
+function webMidi(){
 	navigator.requestMIDIAccess().then((midi)=>{
 		for(const entry of midi.inputs){
 			entry[1].onmidimessage = (msg)=>{
@@ -208,7 +208,7 @@ setInterval(()=>{
 			<label for="loop">Loop?</label>
 		</p>
 		<p>
-			<input type="button" value="Use MIDI keyboard" onclick="kbd()">
+			<input type="button" value="Use Web MIDI" onclick="webMidi()">
 			<input type="button" value="Reset" onclick="reset()">
 		</p>
 		<p>
