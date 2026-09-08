@@ -28,6 +28,7 @@ var defaultMidi;
 var audioContext;
 
 var player;
+var started = false;
 
 async function load(){
 	document.getElementById("play").disabled = true;
@@ -85,6 +86,10 @@ async function load(){
 
 	WaveSynth = EasyMidi_GetSynth(EasyMidi);
 
+	if(started){
+		start();
+	}
+
 	document.getElementById("play").disabled = false;
 };
 
@@ -116,6 +121,8 @@ function start(){
 		document.getElementById("pause").disabled = false;
 
 		player.resume();
+
+		started = true;
 	}
 }
 
