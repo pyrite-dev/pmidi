@@ -9,6 +9,7 @@
 var TurboSynth;
 var EasyMidi;
 var EasyMidi_New;
+var EasyMidi_GetSynth;
 var EasyMidi_Load;
 var EasyMidi_IsFinished;
 var EasyMidi_RenderFloat;
@@ -16,6 +17,12 @@ var EasyMidi_Reset;
 var EasyMidi_Destroy;
 var EasyMidi_BufferPointer;
 var EasyMidi_Buffer;
+
+var WaveSynth;
+var WaveSynth_Note;
+var WaveSynth_SetProgram;
+var WaveSynth_Reset;
+
 var defaultMidi;
 
 var audioContext;
@@ -47,11 +54,16 @@ async function load(){
 	TurboSynth = await TurboSynthWASM();
 
 	EasyMidi_New = TurboSynth.cwrap("EasyMidi_New", "number", ["string", "number"]);
+	EasyMidi_GetSynth = TurboSynth.cwrap("EasyMidi_GetSynth", "number", ["number"]);
 	EasyMidi_Load = TurboSynth.cwrap("EasyMidi_Load", "number", ["number", "string"]);
 	EasyMidi_IsFinished = TurboSynth.cwrap("EasyMidi_IsFinished", "number", ["number"]);
 	EasyMidi_RenderFloat = TurboSynth.cwrap("EasyMidi_RenderFloat", null, ["number", "number", "number"]);
 	EasyMidi_Reset = TurboSynth.cwrap("EasyMidi_Reset", null, ["number"]);
 	EasyMidi_Destroy = TurboSynth.cwrap("EasyMidi_Destroy", null, ["number"]);
+
+	WaveSynth_Note = TurboSynth.cwrap("WaveSynth_Note", null, ["number", "number", "number", "number"])
+	WaveSynth_SetProgram = TurboSynth.cwrap("WaveSynth_SetProgram", null, ["number", "number", "number", "number"]);
+	WaveSynth_Reset = TurboSynth.cwrap("WaveSynth_Reset", null, ["number"]);
 
 	const zip = await JSZip.loadAsync(await (await fetch(document.getElementById("soundfont").value)).arrayBuffer());
 
@@ -71,22 +83,14 @@ async function load(){
 	if((EasyMidi = EasyMidi_New(Object.keys(zip.files).find(x=>x.endsWith(".cfg")), 44100)) == 0) return;	
 	console.log("synthesizer loaded");
 
+	WaveSynth = EasyMidi_GetSynth(EasyMidi);
+
 	document.getElementById("play").disabled = false;
 };
 
 window.onload = load;
 
-function play(){
-	const file = document.getElementById("file");
-
-	function loadMidi(){
-		EasyMidi_Reset(EasyMidi);
-		if(!EasyMidi_Load(EasyMidi, "input.mid")) return;	
-		console.log("midi loaded");
-
-		player.resume();
-	}
-
+function start(){
 	if(!audioContext){
 		audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -110,7 +114,21 @@ function play(){
 		};
 
 		document.getElementById("pause").disabled = false;
+
+		player.resume();
 	}
+}
+
+function play(){
+	const file = document.getElementById("file");
+
+	function loadMidi(){
+		EasyMidi_Reset(EasyMidi);
+		if(!EasyMidi_Load(EasyMidi, "input.mid")) return;	
+		console.log("midi loaded");
+	}
+
+	start();
 
 	if(file.files[0]){
 		const reader = new FileReader();
@@ -129,6 +147,35 @@ function play(){
 
 function pause(){
 	player.paused = !player.paused;
+}
+
+function kbd(){
+	navigator.requestMIDIAccess().then((midi)=>{
+		for(const entry of midi.inputs){
+			entry[1].onmidimessage = (msg)=>{
+				const data = msg.data;
+				const ch = data[0] & 0xf;
+
+				switch(data[0] & 0xf0){
+					case 0x80:
+						WaveSynth_Note(WaveSynth, ch, data[1], 0);
+						break;
+					case 0x90:
+						WaveSynth_Note(WaveSynth, ch, data[1], data[2]);
+						break;
+					case 0xc0:
+						WaveSynth_SetProgram(WaveSynth, ch, data[1], ch == 9);
+						break;
+				}
+			};
+		}
+
+		start();
+	});
+}
+
+function reset(){
+	WaveSynth_Reset(WaveSynth);
 }
 
 setInterval(()=>{
@@ -159,6 +206,10 @@ setInterval(()=>{
 		<p>
 			<input type="checkbox" name="loop" id="loop">
 			<label for="loop">Loop?</label>
+		</p>
+		<p>
+			<input type="button" value="Use MIDI keyboard" onclick="kbd()">
+			<input type="button" value="Reset" onclick="reset()">
 		</p>
 		<p>
 			If you don't select any files, default MIDI gets played...
