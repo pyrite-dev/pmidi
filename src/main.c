@@ -1,109 +1,34 @@
 #include <turbosynth/easymidi.h>
 
-#include "miniaudio.h"
-#include "stb_ds.h"
-
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <unistd.h>
-#endif
-
 #include <config.h>
 
-#define RATE 48000
-#define BUFSZ (RATE / 100)
-
-typedef struct buffer buffer_t;
-
-struct buffer {
-	short buffer[BUFSZ * 2];
-	int   seek;
-};
+#include "output.h"
 
 static EasyMidi* gEasyMidi;
-
-static ma_mutex	 gBufferMutex;
-static buffer_t* gBuffer = NULL;
 
 static void render(short* out, int frames) {
 	EasyMidi_RenderShort(gEasyMidi, out, frames);
 }
 
-static int bufferSize(void) {
-	int i;
-	int r = 0;
-
-	ma_mutex_lock(&gBufferMutex);
-	for(i = 0; i < arrlen(gBuffer); i++) {
-		r += BUFSZ - gBuffer[i].seek;
-	}
-	ma_mutex_unlock(&gBufferMutex);
-
-	return r;
-}
-
-static void dataCallback(ma_device* device, void* output, const void* input, ma_uint32 frames) {
-	short* out = output;
-	int    f   = 0;
-
-	memset(out, 0, sizeof(*out) * frames * 2);
-	while(bufferSize() > 0 && (frames - f) > 0) {
-		int n = 0;
-
-		ma_mutex_lock(&gBufferMutex);
-		n = (frames - f) > (BUFSZ - gBuffer[0].seek) ? (BUFSZ - gBuffer[0].seek) : (frames - f);
-
-		memcpy(out + f * 2, gBuffer[0].buffer + gBuffer[0].seek * 2, sizeof(gBuffer[0].buffer[0]) * n * 2);
-
-		gBuffer[0].seek += n;
-		f += n;
-		if((BUFSZ - gBuffer[0].seek) <= 0) arrdel(gBuffer, 0);
-		ma_mutex_unlock(&gBufferMutex);
-	}
-}
-
-void write16(FILE* f, unsigned short n) {
-	int	      i;
-	unsigned char c;
-
-	for(i = 0; i < sizeof(n); i++) {
-		c = n & 0xff;
-		n = n >> 8;
-
-		fwrite(&c, 1, 1, f);
-	}
-}
-
-void write32(FILE* f, unsigned int n) {
-	int	      i;
-	unsigned char c;
-
-	for(i = 0; i < sizeof(n); i++) {
-		c = n & 0xff;
-		n = n >> 8;
-
-		fwrite(&c, 1, 1, f);
-	}
-}
-
 int main(int argc, char** argv) {
-	ma_device_config config;
-	ma_device	 device;
-	const char*	 cfg  = SYSCONFDIR "/pmidi/pmidi.cfg";
-	const char*	 midi = NULL;
-	const char*	 wav  = NULL;
-	int		 i;
-	int		 miniaudio = 1;
-	int		 wave	   = 0;
+	const char*   cfg  = SYSCONFDIR "/pmidi/pmidi.cfg";
+	const char*   midi = NULL;
+	const char*   wav  = NULL;
+	int	      i;
+	output_mod_t* mods[] = {
+	    o_miniaudio,
+	    o_wave,
+	    NULL};
+	output_mod_t* omod   = NULL;
+	output_t*     output = NULL;
+	const char*   outarg = NULL;
+	int	      n	     = 0;
 
 	for(i = 1; i < argc; i++) {
 		if(strcmp(argv[i], "-C") == 0) {
 			cfg = argv[i][2] == 0 ? argv[++i] : argv[i];
 		} else if(strcmp(argv[i], "-o") == 0) {
-			wav	  = argv[i][2] == 0 ? argv[++i] : argv[i];
-			wave	  = 1;
-			miniaudio = 0;
+			outarg = argv[i][2] == 0 ? argv[++i] : argv[i];
 		} else if(argv[i][0] == '-') {
 		} else {
 			midi = argv[i];
@@ -132,103 +57,39 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	if(miniaudio) {
-		config			 = ma_device_config_init(ma_device_type_playback);
-		config.playback.format	 = ma_format_s16;
-		config.playback.channels = 2;
-		config.sampleRate	 = RATE;
-		config.dataCallback	 = dataCallback;
-		config.pUserData	 = NULL;
-
-		if(ma_device_init(NULL, &config, &device) != MA_SUCCESS) {
-			EasyMidi_Destroy(gEasyMidi);
-
-			fprintf(stderr, "cannot open audio\n");
-			return 1;
+	for(i = 0; i < sizeof(mods) / sizeof(mods[0]); i++) {
+		if((output = mods[i]->New(outarg)) != NULL) {
+			omod = mods[i];
+			break;
 		}
+	}
 
-		if(ma_device_start(&device) != MA_SUCCESS) {
-			ma_device_uninit(&device);
-			EasyMidi_Destroy(gEasyMidi);
+	if(omod == NULL || output == NULL) {
+		EasyMidi_Destroy(gEasyMidi);
 
-			fprintf(stderr, "cannot open audio\n");
-			return 1;
-		}
-
-		ma_mutex_init(&gBufferMutex);
+		fprintf(stderr, "audio device failure\n");
+		return 1;
 	}
 
 	while(1) {
-		buffer_t buffer = {0};
-		int	 i;
+		int   i;
+		short buffer[BUFSZ * 2];
 
 		if(EasyMidi_IsFinished(gEasyMidi)) break;
 
-		render(buffer.buffer, BUFSZ);
+		render(buffer, BUFSZ);
+		omod->Write(output, buffer);
 
-		if(miniaudio) {
-			ma_mutex_lock(&gBufferMutex);
-			arrput(gBuffer, buffer);
-			ma_mutex_unlock(&gBufferMutex);
+		n += BUFSZ;
 
-			while(bufferSize() > RATE / 10)
-#ifdef _WIN32
-				Sleep(1);
-#else
-				usleep(1000);
-#endif
-		}
-		if(wave) {
-			printf("%d seconds rendered\r", arrlen(gBuffer) * BUFSZ / RATE);
-			fflush(stdout);
-
-			arrput(gBuffer, buffer);
-		}
+		printf("%d seconds rendered\r", n / RATE);
+		fflush(stdout);
 	}
 
-	if(miniaudio)
-		while(bufferSize() > 0);
+	printf("\n");
 
-	if(wave) {
-		FILE* out     = fopen(wav, "wb");
-		int   samples = arrlen(gBuffer) * BUFSZ;
-		int   i;
-
-		printf("\n");
-
-		fwrite("RIFF", 1, 4, out);
-		write32(out, 4 + (8 + 16) + (8 + samples * 2 * 2));
-		fwrite("WAVE", 1, 4, out);
-		fwrite("fmt ", 1, 4, out);
-		write32(out, 16);
-		write16(out, 1);
-		write16(out, 2);
-		write32(out, RATE);
-		write32(out, RATE * 2 * 2);
-		write16(out, 2 * 2);
-		write16(out, 16);
-		fwrite("data", 1, 4, out);
-		write32(out, samples * 2 * 2);
-
-		for(i = 0; i < arrlen(gBuffer); i++) {
-			int j;
-
-			for(j = 0; j < BUFSZ * 2; j++) {
-				write16(out, gBuffer[i].buffer[j]);
-			}
-		}
-
-		fclose(out);
-	}
-
-quit:;
-	if(miniaudio) {
-		ma_mutex_uninit(&gBufferMutex);
-		ma_device_uninit(&device);
-	}
+	omod->Destroy(output);
 	EasyMidi_Destroy(gEasyMidi);
-
-	arrfree(gBuffer);
 
 	return 0;
 }
