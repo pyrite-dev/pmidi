@@ -96,6 +96,8 @@ async function load(){
 window.onload = load;
 
 function start(){
+	const vol = document.getElementById("volume");
+
 	if(!audioContext){
 		audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -113,8 +115,8 @@ function start(){
 			EasyMidi_RenderFloat(EasyMidi, EasyMidi_BufferPointer, frames);
 
 			for(let i = 0; i < frames; i++){
-				lChannelData[i] = EasyMidi_Buffer[2 * i + 0];
-				rChannelData[i] = EasyMidi_Buffer[2 * i + 1];
+				lChannelData[i] = EasyMidi_Buffer[2 * i + 0] * vol.value / 100;
+				rChannelData[i] = EasyMidi_Buffer[2 * i + 1] * vol.value / 100;
 			}
 		};
 
@@ -216,6 +218,7 @@ setInterval(()=>{
 		<p>
 			<input type="checkbox" name="loop" id="loop">
 			<label for="loop">Loop?</label>
+			<input type="range" min="0" max="100" value="100" id="volume">
 		</p>
 		<p>
 			<input type="button" value="Use Web MIDI" onclick="webMidi()">

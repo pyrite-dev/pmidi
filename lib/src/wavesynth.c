@@ -104,10 +104,24 @@ WaveSynth* WaveSynth_New(FileStream* fs, int rate) {
 	char	   c[2];
 	int	   comment = 0;
 	int	   num	   = -1; /* -1 to ignore numbers */
+	char*	   dir	   = malloc(strlen(fs->path) + 1);
+	char*	   dirr;
+
+	strcpy(dir, fs->path);
+	if((dirr = strrchr(dir, '/')) != NULL || (dirr = strrchr(dir, '\\')) != NULL) {
+		for(; dirr > dir && (*dirr == '/' || *dirr == '\\'); dirr--) *dirr = 0;
+	}
+
+	if(dirr == NULL || strlen(dir) == 0) {
+		strcpy(dir, "./");
+	}
 
 	self->rate = rate;
 
-	if(fs == NULL) return self;
+	if(fs == NULL) {
+		free(dir);
+		return self;
+	}
 
 	line[0] = 0;
 	c[1]	= 0;
@@ -134,10 +148,9 @@ WaveSynth* WaveSynth_New(FileStream* fs, int rate) {
 
 						if(0 <= program && program < 128) {
 							FileStream* patch;
-							int	    p2l	       = strlen(fs->path == NULL ? "" : fs->path) + 10 + strlen(arg1) + 4 + 1;
 							char*	    patchpath  = malloc(strlen(arg1) + 4 + 1);
-							char*	    patchpath2 = malloc(p2l);
-							char*	    patchpath3 = malloc(p2l);
+							char*	    patchpath2 = malloc(strlen(dir) + 1 + strlen(arg1) + 1);
+							char*	    patchpath3 = malloc(strlen(dir) + 1 + strlen(arg1) + 4 + 1);
 
 							strcpy(patchpath, arg1);
 							strcat(patchpath, ".pat");
@@ -145,16 +158,8 @@ WaveSynth* WaveSynth_New(FileStream* fs, int rate) {
 							if(fs->path == NULL) {
 								patchpath2[0] = patchpath3[0] = 0;
 							} else {
-								char* n;
-
-								strcpy(patchpath2, fs->path);
-								if((n = strrchr(patchpath2, '/')) == NULL) {
-									strcpy(patchpath2, "./");
-								} else {
-									n[0] = 0;
-									for(n--; n != patchpath2 && *n == '/' && *n == '\\'; n--) n[0] = 0;
-									strcat(patchpath2, "/");
-								}
+								strcpy(patchpath2, dir);
+								strcat(patchpath2, "/");
 								strcat(patchpath2, arg1);
 
 								strcpy(patchpath3, patchpath2);
@@ -169,6 +174,8 @@ WaveSynth* WaveSynth_New(FileStream* fs, int rate) {
 									free(patchpath);
 									WaveSynth_Destroy(self);
 
+									free(dir);
+
 									return NULL;
 								}
 
@@ -181,6 +188,8 @@ WaveSynth* WaveSynth_New(FileStream* fs, int rate) {
 								free(patchpath2);
 								free(patchpath);
 								WaveSynth_Destroy(self);
+
+								free(dir);
 
 								return NULL;
 							}
@@ -196,6 +205,10 @@ WaveSynth* WaveSynth_New(FileStream* fs, int rate) {
 
 							self->bank.nSets++;
 						}
+					} else if(strcmp(arg0, "dir") == 0) {
+						free(dir);
+						dir = malloc(strlen(arg1) + 1);
+						strcpy(dir, arg1);
 					}
 				}
 			}
@@ -218,6 +231,8 @@ WaveSynth* WaveSynth_New(FileStream* fs, int rate) {
 	}
 
 	WaveSynth_Reset(self);
+
+	free(dir);
 
 	return self;
 }

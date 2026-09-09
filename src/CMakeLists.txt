@@ -1,5 +1,6 @@
 file(GLOB PMIDI_SOURCES *.c)
 add_executable(pmidi ${PMIDI_SOURCES})
+target_include_directories(pmidi PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(pmidi PRIVATE turbosynth)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Windows")
@@ -8,3 +9,6 @@ endif()
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	target_link_libraries(pmidi PRIVATE dl)
 endif()
+
+include(GNUInstallDirs)
+configure_file(config.h.in config.h)

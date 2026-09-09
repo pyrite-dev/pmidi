@@ -9,6 +9,8 @@
 #include <unistd.h>
 #endif
 
+#include <config.h>
+
 #define RATE 48000
 #define BUFSZ (RATE / 100)
 
@@ -88,7 +90,7 @@ void write32(FILE* f, unsigned int n) {
 int main(int argc, char** argv) {
 	ma_device_config config;
 	ma_device	 device;
-	const char*	 cfg  = NULL;
+	const char*	 cfg  = SYSCONFDIR "/pmidi/pmidi.cfg";
 	const char*	 midi = NULL;
 	const char*	 wav  = NULL;
 	int		 i;
