@@ -62,6 +62,10 @@ static void Write(output_t* self, short* wave) {
 	arrput(self->buffers, buffer);
 }
 
+static int BufferedSize(output_t* self) {
+	return arrlen(self->buffers) * BUFSZ;
+}
+
 static void Destroy(output_t* self) {
 	int samples = arrlen(self->buffers) * BUFSZ;
 	int i;
@@ -96,5 +100,7 @@ static void Destroy(output_t* self) {
 static output_mod_t output = {
     New,
     Write,
-    Destroy};
+    BufferedSize,
+    Destroy,
+    1};
 output_mod_t* o_wave = &output;

@@ -7,12 +7,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <unistd.h>
-#endif
-
 typedef struct buffer buffer_t;
 
 struct buffer {
@@ -100,13 +94,10 @@ static void Write(output_t* self, short* wave) {
 	ma_mutex_lock(&self->mutex);
 	arrput(self->buffers, buffer);
 	ma_mutex_unlock(&self->mutex);
+}
 
-	while(bufferSize(self) >= RATE * 0.5);
-#ifdef _WIN32
-	Sleep(1);
-#else
-	usleep(1 * 1000);
-#endif
+static int BufferedSize(output_t* self) {
+	return bufferSize(self);
 }
 
 static void Destroy(output_t* self) {
@@ -119,5 +110,7 @@ static void Destroy(output_t* self) {
 static output_mod_t output = {
     New,
     Write,
-    Destroy};
+    BufferedSize,
+    Destroy,
+    0};
 output_mod_t* o_miniaudio = &output;

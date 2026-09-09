@@ -12,7 +12,9 @@ typedef struct output_mod output_mod_t;
 struct output_mod {
 	output_t* (*New)(const char* output);
 	void (*Write)(output_t* self, short* wave);
+	int (*BufferedSize)(output_t* self);
 	void (*Destroy)(output_t* self);
+	int IsFile;
 };
 
 extern output_mod_t* o_miniaudio;
