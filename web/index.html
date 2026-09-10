@@ -100,7 +100,11 @@ async function load(){
 	}
 
 	for(let i = 0; i < 256; i++){
-		midiBuffers[i] = TurboSynth._malloc(512);
+		midiBuffers[i] = {
+			event: TurboSynth._malloc(512),
+			data: TurboSynth._malloc(512),
+			pData: TurboSynth._malloc(4)
+		}
 	}
 
 	document.getElementById("webmidi").disabled = false;
@@ -178,18 +182,11 @@ function webMidi(){
 
 		for(const entry of midi.inputs){
 			entry[1].onmidimessage = (msg)=>{
-				const data = msg.data;
-				const ptr = TurboSynth._malloc(data.length);
-				const pptr = TurboSynth._malloc(4);
-	
-				TurboSynth.HEAPU8.set(data, ptr);
-				TurboSynth.HEAPU32[pptr / 4] = ptr;
+				TurboSynth.HEAPU8.set(msg.data, midiBuffers[i].data);
+				TurboSynth.HEAPU32[midiBuffers[i].pData / 4] = midiBuffers[i].data;
 
-				MidiStream_Parse(0, pptr, 0, midiBuffers[i]);
-				EasyMidi_MidiHandler(WaveSynth, midiBuffers[i]);
-
-				TurboSynth._free(pptr);
-				TurboSynth._free(ptr);
+				MidiStream_Parse(0, midiBuffers[i].pData, 0, midiBuffers[i].event);
+				EasyMidi_MidiHandler(WaveSynth, midiBuffers[i].event);
 			};
 
 			i++;
