@@ -7,6 +7,7 @@ static __inline unsigned int read8(FileStream* fs, unsigned char** input) {
 		FileStream_Read(fs, &n, 1);
 	} else {
 		n = **input;
+		(*input) += 1;
 	}
 
 	return n;
@@ -18,7 +19,8 @@ static __inline unsigned int read16(FileStream* fs, unsigned char** input) {
 	if(input == NULL) {
 		FileStream_Read(fs, n, 2);
 	} else {
-		memcpy(n, *input, sizeof(n));
+		memcpy(n, *input, 2);
+		(*input) += 2;
 	}
 
 	return ((unsigned int)n[0] << 8) | n[1];
@@ -30,7 +32,8 @@ static __inline unsigned int read24(FileStream* fs, unsigned char** input) {
 	if(input == NULL) {
 		FileStream_Read(fs, n, 3);
 	} else {
-		memcpy(n, *input, sizeof(n));
+		memcpy(n, *input, 3);
+		(*input) += 3;
 	}
 
 	return ((unsigned int)n[0] << 16) | ((unsigned int)n[1] << 8) | n[2];
@@ -42,7 +45,8 @@ static __inline unsigned int read32(FileStream* fs, unsigned char** input) {
 	if(input == NULL) {
 		FileStream_Read(fs, n, 4);
 	} else {
-		memcpy(n, *input, sizeof(n));
+		memcpy(n, *input, 4);
+		(*input) += 4;
 	}
 
 	return ((unsigned int)n[0] << 24) | ((unsigned int)n[1] << 16) | ((unsigned int)n[2] << 8) | n[3];
@@ -57,7 +61,7 @@ static __inline unsigned int readDelta(FileStream* fs, unsigned char** input) {
 			if(FileStream_Read(fs, &n, 1) < 1) break;
 		} else {
 			n = **input;
-			*input++;
+			(*input)++;
 		}
 
 		r = r << 7;
@@ -133,7 +137,7 @@ void MidiStream_Parse(FileStream* fs, unsigned char** buf, MidiTrack* track, Mid
 	MidiBigUInt   oldSeek = buf != NULL ? 0 : FileStream_Tell(fs);
 	unsigned char op;
 
-	ev->type = -1;
+	ev->type = 0;
 
 	op = read8(fs, buf);
 
@@ -143,7 +147,7 @@ void MidiStream_Parse(FileStream* fs, unsigned char** buf, MidiTrack* track, Mid
 		if(buf == NULL) {
 			FileStream_Seek(fs, oldSeek);
 		} else {
-			*buf--;
+			(*buf)--;
 		}
 	}
 
@@ -245,7 +249,7 @@ static void readEvent(MidiStream* self, MidiTrack* track) {
 
 	MidiStream_Parse(self->fs, NULL, track, &ev);
 
-	if(ev.type != -1) {
+	if(ev.type != 0) {
 		if(ev.type == MidiEventTempoChange) self->tempo = ev.tempoChange.tempo;
 
 		self->callback(self, &ev);

@@ -22,7 +22,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
 		"-sSINGLE_FILE=1"
 		"-sSINGLE_FILE_BINARY_ENCODE=0"
 		"-sEXPORTED_FUNCTIONS=[\"_free\", \"_malloc\", ${FS_SYMS}, ${MIDI_SYMS}, ${WAVESYNTH_SYMS}, ${EASYMIDI_SYMS}]"
-		"-sEXPORTED_RUNTIME_METHODS=[\"cwrap\", \"ccall\", \"HEAPF32\", \"addFunction\", \"FS\"]"
+		"-sEXPORTED_RUNTIME_METHODS=[\"cwrap\", \"ccall\", \"HEAPU8\", \"HEAPU32\", \"HEAPF32\", \"addFunction\", \"FS\"]"
 		"-sMODULARIZE=1"
 		"-sALLOW_TABLE_GROWTH=1"
 		"-sALLOW_MEMORY_GROWTH=1"
