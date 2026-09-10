@@ -188,8 +188,6 @@ function webMidi(){
 				MidiStream_Parse(0, pptr, 0, midiBuffers[i]);
 				EasyMidi_MidiHandler(WaveSynth, midiBuffers[i]);
 
-				console.log(TurboSynth.HEAPU8[midiBuffers[i]]);
-
 				TurboSynth._free(pptr);
 				TurboSynth._free(ptr);
 			};
