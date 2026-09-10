@@ -92,7 +92,7 @@ int EasyMidi_Load2(EasyMidi* self, FileStream* midi) {
 int EasyMidi_IsFinished(EasyMidi* self) {
 	int i;
 
-	if(self->ms == NULL) return 1;
+	if(self->ms == NULL) return 0;
 
 	for(i = 0; i < self->ms->nTracks && self->ms->tracks[i].finished; i++);
 	if(i == self->ms->nTracks) return 1;
