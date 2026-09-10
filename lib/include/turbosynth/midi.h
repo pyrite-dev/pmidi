@@ -26,7 +26,7 @@ typedef struct MidiStream MidiStream;
 typedef void (*MidiCallback)(MidiStream* ms, const MidiEvent* event);
 
 enum MidiEventType {
-	MidiEventInvalid = -1,
+	MidiEventInvalid = 0,
 	MidiEventNote,
 	MidiEventControl,
 	MidiEventProgramChange,

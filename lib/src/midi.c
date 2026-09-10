@@ -137,7 +137,7 @@ void MidiStream_Parse(FileStream* fs, unsigned char** buf, MidiTrack* track, Mid
 	MidiBigUInt   oldSeek = buf != NULL ? 0 : FileStream_Tell(fs);
 	unsigned char op;
 
-	ev->type = 0;
+	ev->type = MidiEventInvalid;
 
 	op = read8(fs, buf);
 
@@ -249,7 +249,7 @@ static void readEvent(MidiStream* self, MidiTrack* track) {
 
 	MidiStream_Parse(self->fs, NULL, track, &ev);
 
-	if(ev.type != 0) {
+	if(ev.type != MidiEventInvalid) {
 		if(ev.type == MidiEventTempoChange) self->tempo = ev.tempoChange.tempo;
 
 		self->callback(self, &ev);
