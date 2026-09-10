@@ -1,43 +1,64 @@
 #include <turbosynth/midi.h>
 
-static __inline unsigned int read8(FileStream* fs) {
+static __inline unsigned int read8(FileStream* fs, unsigned char** input) {
 	unsigned char n;
 
-	FileStream_Read(fs, &n, 1);
+	if(input == NULL) {
+		FileStream_Read(fs, &n, 1);
+	} else {
+		n = **input;
+	}
 
 	return n;
 }
 
-static __inline unsigned int read16(FileStream* fs) {
+static __inline unsigned int read16(FileStream* fs, unsigned char** input) {
 	unsigned char n[2];
 
-	FileStream_Read(fs, n, 2);
+	if(input == NULL) {
+		FileStream_Read(fs, n, 2);
+	} else {
+		memcpy(n, *input, sizeof(n));
+	}
 
 	return ((unsigned int)n[0] << 8) | n[1];
 }
 
-static __inline unsigned int read24(FileStream* fs) {
+static __inline unsigned int read24(FileStream* fs, unsigned char** input) {
 	unsigned char n[3];
 
-	FileStream_Read(fs, n, 3);
+	if(input == NULL) {
+		FileStream_Read(fs, n, 3);
+	} else {
+		memcpy(n, *input, sizeof(n));
+	}
 
 	return ((unsigned int)n[0] << 16) | ((unsigned int)n[1] << 8) | n[2];
 }
 
-static __inline unsigned int read32(FileStream* fs) {
+static __inline unsigned int read32(FileStream* fs, unsigned char** input) {
 	unsigned char n[4];
 
-	FileStream_Read(fs, n, 4);
+	if(input == NULL) {
+		FileStream_Read(fs, n, 4);
+	} else {
+		memcpy(n, *input, sizeof(n));
+	}
 
 	return ((unsigned int)n[0] << 24) | ((unsigned int)n[1] << 16) | ((unsigned int)n[2] << 8) | n[3];
 }
 
-static __inline unsigned int readDelta(FileStream* fs) {
+static __inline unsigned int readDelta(FileStream* fs, unsigned char** input) {
 	unsigned char n;
 	unsigned int  r = 0;
 
 	do {
-		if(FileStream_Read(fs, &n, 1) < 1) break;
+		if(input == NULL) {
+			if(FileStream_Read(fs, &n, 1) < 1) break;
+		} else {
+			n = **input;
+			*input++;
+		}
 
 		r = r << 7;
 		r = r | (n & 0x7f);
@@ -54,15 +75,15 @@ MidiStream* MidiStream_New(FileStream* fs, MidiCallback callback) {
 	self->fs       = fs;
 	self->callback = callback;
 
-	if(read32(self->fs) != 0x4d546864) {
+	if(read32(self->fs, NULL) != 0x4d546864) {
 		MidiStream_Destroy(self);
 
 		return NULL;
 	}
 
-	toSeek = 8 + read32(self->fs);
+	toSeek = 8 + read32(self->fs, NULL);
 
-	self->format = read16(self->fs);
+	self->format = read16(self->fs, NULL);
 
 	/* appearantly format 2 is not used a lot */
 	if(self->format != 0 && self->format != 1) {
@@ -71,8 +92,8 @@ MidiStream* MidiStream_New(FileStream* fs, MidiCallback callback) {
 		return NULL;
 	}
 
-	self->nTracks  = read16(self->fs);
-	self->division = read16(self->fs);
+	self->nTracks  = read16(self->fs, NULL);
+	self->division = read16(self->fs, NULL);
 	self->tempo    = 500000;
 
 #ifdef DEBUG
@@ -86,14 +107,14 @@ MidiStream* MidiStream_New(FileStream* fs, MidiCallback callback) {
 	for(i = 0; i < self->nTracks; i++) {
 		MidiBigUInt nextTrack = 8 + FileStream_Tell(self->fs);
 
-		if(read32(self->fs) != 0x4d54726b) {
+		if(read32(self->fs, NULL) != 0x4d54726b) {
 			MidiStream_Destroy(self);
 
 			return NULL;
 		}
 
-		self->tracks[i].dataSize  = read32(self->fs);
-		self->tracks[i].nextTick  = readDelta(self->fs);
+		self->tracks[i].dataSize  = read32(self->fs, NULL);
+		self->tracks[i].nextTick  = readDelta(self->fs, NULL);
 		self->tracks[i].fileStart = self->tracks[i].filePos = FileStream_Tell(self->fs);
 
 #ifdef DEBUG
@@ -108,72 +129,69 @@ MidiStream* MidiStream_New(FileStream* fs, MidiCallback callback) {
 	return self;
 }
 
-static void readEvent(MidiStream* self, MidiTrack* track) {
+void MidiStream_Parse(FileStream* fs, unsigned char** buf, MidiTrack* track, MidiEvent* ev) {
+	MidiBigUInt   oldSeek = buf != NULL ? 0 : FileStream_Tell(fs);
 	unsigned char op;
-	MidiEvent     ev;
-	MidiBigUInt   oldSeek = FileStream_Tell(self->fs);
 
-	op = read8(self->fs);
+	ev->type = -1;
 
-	if(!(op & (1 << 7))) {
+	op = read8(fs, buf);
+
+	if(track != NULL && !(op & (1 << 7))) {
 		op = track->runningStatus;
 
-		FileStream_Seek(self->fs, oldSeek);
+		if(buf == NULL) {
+			FileStream_Seek(fs, oldSeek);
+		} else {
+			*buf--;
+		}
 	}
 
 	switch(op & 0xf0) {
 	case 0x80:
 	case 0x90:
-		ev.type		 = MidiEventNote;
-		ev.note.channel	 = op & 0x0f;
-		ev.note.key	 = read8(self->fs);
-		ev.note.velocity = read8(self->fs);
+		ev->type	  = MidiEventNote;
+		ev->note.channel  = op & 0x0f;
+		ev->note.key	  = read8(fs, buf);
+		ev->note.velocity = read8(fs, buf);
 
-		if((op & 0xf0) == 0x80) ev.note.velocity = 0;
-
-		self->callback(self, &ev);
+		if((op & 0xf0) == 0x80) ev->note.velocity = 0;
 		break;
 
 	case 0xa0:
 		/* TODO */
-		read16(self->fs);
+		read16(fs, buf);
 
 		break;
 
 	case 0xb0:
-		ev.type		   = MidiEventControl;
-		ev.control.channel = op & 0x0f;
-		ev.control.key	   = read8(self->fs);
-		ev.control.value   = read8(self->fs);
-
-		self->callback(self, &ev);
+		ev->type	    = MidiEventControl;
+		ev->control.channel = op & 0x0f;
+		ev->control.key	    = read8(fs, buf);
+		ev->control.value   = read8(fs, buf);
 		break;
 
 	case 0xc0:
-		ev.type			 = MidiEventProgramChange;
-		ev.programChange.channel = op & 0xf;
-		ev.programChange.program = read8(self->fs);
-
-		self->callback(self, &ev);
+		ev->type		  = MidiEventProgramChange;
+		ev->programChange.channel = op & 0xf;
+		ev->programChange.program = read8(fs, buf);
 		break;
 
 	case 0xd0:
 		/* TODO */
-		read8(self->fs);
+		read8(fs, buf);
 
 		break;
 
 	case 0xe0:
 	{
-		int bendl = read8(self->fs);
-		int bendm = read8(self->fs);
+		int bendl = read8(fs, buf);
+		int bendm = read8(fs, buf);
 
-		ev.type			     = MidiEventPitchWheelChange;
-		ev.pitchWheelChange.channel  = op & 0xf;
-		ev.pitchWheelChange.bend     = ((bendm << 7) | bendm) - 8192;
-		ev.pitchWheelChange.semitone = (double)ev.pitchWheelChange.bend / 8192 * 2;
-
-		self->callback(self, &ev);
+		ev->type		      = MidiEventPitchWheelChange;
+		ev->pitchWheelChange.channel  = op & 0xf;
+		ev->pitchWheelChange.bend     = ((bendm << 7) | bendm) - 8192;
+		ev->pitchWheelChange.semitone = (double)ev->pitchWheelChange.bend / 8192 * 2;
 		break;
 	}
 
@@ -182,34 +200,35 @@ static void readEvent(MidiStream* self, MidiTrack* track) {
 		case 0xf0:
 		case 0xf7:
 		{
-			unsigned int len = readDelta(self->fs);
+			unsigned int len = readDelta(fs, buf);
+			int	     i;
 
-			FileStream_Seek(self->fs, FileStream_Tell(self->fs) + len);
+			for(i = 0; i < len; i++) read8(fs, buf);
 			break;
 		}
 
 		case 0xff:
 		{
-			unsigned char type = read8(self->fs);
-			unsigned int  len  = readDelta(self->fs);
+			unsigned char type = read8(fs, buf);
+			unsigned int  len  = readDelta(fs, buf);
+			int	      i;
 
 			switch(type) {
 			case 0x2f:
-				if(len == 0) {
+				if(len == 0 && track != NULL) {
 					track->finished = 1;
-
-					break;
 				}
+				break;
 
 			case 0x51:
 				if(len == 3) {
-					self->tempo = read24(self->fs);
-
-					break;
+					ev->tempoChange.type  = MidiEventTempoChange;
+					ev->tempoChange.tempo = read24(fs, buf);
 				}
+				break;
 
 			default:
-				FileStream_Seek(self->fs, FileStream_Tell(self->fs) + len);
+				for(i = 0; i < len; i++) read8(fs, buf);
 				break;
 			}
 			break;
@@ -218,7 +237,19 @@ static void readEvent(MidiStream* self, MidiTrack* track) {
 		break;
 	}
 
-	if(op >= 0x80 && op <= 0xef) track->runningStatus = op;
+	if(track != NULL && op >= 0x80 && op <= 0xef) track->runningStatus = op;
+}
+
+static void readEvent(MidiStream* self, MidiTrack* track) {
+	MidiEvent ev;
+
+	MidiStream_Parse(self->fs, NULL, track, &ev);
+
+	if(ev.type != -1) {
+		if(ev.type == MidiEventTempoChange) self->tempo = ev.tempoChange.tempo;
+
+		self->callback(self, &ev);
+	}
 }
 
 void MidiStream_Advance(MidiStream* self, double sec) {
@@ -276,7 +307,7 @@ void MidiStream_Advance(MidiStream* self, double sec) {
 				continue;
 			}
 
-			self->tracks[i].nextTick += readDelta(self->fs);
+			self->tracks[i].nextTick += readDelta(self->fs, NULL);
 			self->tracks[i].filePos = FileStream_Tell(self->fs);
 		}
 	}
