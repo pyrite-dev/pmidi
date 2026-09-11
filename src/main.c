@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
 		} else if(startcmp(argv[i], "-o")) {
 			outarg	= argv[i][2] == 0 ? argv[++i] : (argv[i] + 2);
 			mods[0] = o_wave;
-		} else if(startcmp(argv[i], "-i")) {
+		} else if(startcmp(argv[i], "-O")) {
 			char* arg = argv[i][2] == 0 ? argv[++i] : (argv[i] + 2);
 
 			if(arg != NULL) {
