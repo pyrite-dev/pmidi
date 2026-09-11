@@ -112,5 +112,7 @@ static output_mod_t output = {
     Write,
     BufferedSize,
     Destroy,
+    "miniaudio",
+    'm',
     0};
 output_mod_t* o_miniaudio = &output;

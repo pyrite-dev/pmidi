@@ -16,11 +16,23 @@ static void render(short* out, int frames) {
 	EasyMidi_RenderShort(gEasyMidi, out, frames);
 }
 
+int startcmp(const char* big, const char* small) {
+	int i;
+
+	if(strlen(big) < strlen(small)) return 0;
+
+	for(i = 0; i < strlen(small); i++) {
+		if(big[i] != small[i]) return 0;
+	}
+
+	return 1;
+}
+
 int main(int argc, char** argv) {
 	const char*   cfg  = SYSCONFDIR "/pmidi/pmidi.cfg";
 	const char*   midi = NULL;
 	const char*   wav  = NULL;
-	int	      i;
+	int	      i, j;
 	output_mod_t* mods[] = {
 	    NULL,
 	    o_miniaudio,
@@ -31,11 +43,22 @@ int main(int argc, char** argv) {
 	int	      n	     = 0;
 
 	for(i = 1; i < argc; i++) {
-		if(strcmp(argv[i], "-C") == 0) {
-			cfg = argv[i][2] == 0 ? argv[++i] : argv[i];
-		} else if(strcmp(argv[i], "-o") == 0) {
-			outarg	= argv[i][2] == 0 ? argv[++i] : argv[i];
+		if(startcmp(argv[i], "-C")) {
+			cfg = argv[i][2] == 0 ? argv[++i] : (argv[i] + 2);
+		} else if(startcmp(argv[i], "-o")) {
+			outarg	= argv[i][2] == 0 ? argv[++i] : (argv[i] + 2);
 			mods[0] = o_wave;
+		} else if(startcmp(argv[i], "-i")) {
+			char* arg = argv[i][2] == 0 ? argv[++i] : (argv[i] + 2);
+
+			if(arg != NULL) {
+				for(j = 1; j < sizeof(mods) / sizeof(mods[0]); j++) {
+					if(strcmp(mods[j]->Name, arg) == 0 || (strlen(arg) == 1 && mods[j]->Initial == arg[0])) {
+						omod = mods[j];
+						break;
+					}
+				}
+			}
 		} else if(argv[i][0] == '-') {
 		} else {
 			midi = argv[i];
@@ -64,11 +87,14 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	for(i = 0; i < sizeof(mods) / sizeof(mods[0]); i++) {
-		if(mods[i] == NULL) continue;
-		if((output = mods[i]->New(outarg)) != NULL) {
-			omod = mods[i];
-			break;
+	if(omod == NULL || output == NULL) {
+		for(i = 0; i < sizeof(mods) / sizeof(mods[0]); i++) {
+			if(mods[i] == NULL) continue;
+			if(omod != NULL && mods[i] != omod) continue;
+			if((output = mods[i]->New(outarg)) != NULL) {
+				omod = mods[i];
+				break;
+			}
 		}
 	}
 

@@ -14,7 +14,10 @@ struct output_mod {
 	void (*Write)(output_t* self, short* wave);
 	int (*BufferedSize)(output_t* self);
 	void (*Destroy)(output_t* self);
-	int IsFile;
+
+	const char* Name;
+	char	    Initial;
+	int	    IsFile;
 };
 
 extern output_mod_t* o_miniaudio;

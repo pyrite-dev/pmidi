@@ -102,5 +102,7 @@ static output_mod_t output = {
     Write,
     BufferedSize,
     Destroy,
+    "wave output",
+    'w',
     1};
 output_mod_t* o_wave = &output;
