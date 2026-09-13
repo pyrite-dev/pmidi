@@ -33,5 +33,6 @@ extern InterfaceMod* iChosen;
 extern Interface*    iHandle;
 
 extern InterfaceMod* iDumb;
+extern InterfaceMod* iMilsko;
 
 #endif

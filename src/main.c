@@ -34,7 +34,7 @@ Output*	   oHandle = NULL;
 
 void audio_thread(void* arg) {
 repeat:;
-	while(1) {
+	while(!gPlayed) {
 		short buffer[BUFSZ * 2];
 
 		Mutex_Lock(mAudio);
@@ -105,8 +105,14 @@ int main(int argc, char** argv) {
 	memset(iModules, 0, sizeof(iModules));
 	memset(oModules, 0, sizeof(oModules));
 
-	n	      = 0;
+	n = 0;
+#ifdef _WIN32
+	iModules[n++] = iMilsko;
+#endif
 	iModules[n++] = iDumb;
+#ifndef _WIN32
+	iModules[n++] = iMilsko;
+#endif
 
 	n	      = 0;
 	oModules[n++] = oMiniaudio;
@@ -224,6 +230,8 @@ int main(int argc, char** argv) {
 	tAudio = Thread_New(audio_thread, NULL);
 
 	iChosen->Run(iHandle);
+
+	gPlayed = 1;
 	Thread_Wait(tAudio);
 	Thread_Destroy(tAudio);
 	Mutex_Destroy(mAudio);
