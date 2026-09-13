@@ -3,7 +3,7 @@ project(pmidi)
 
 add_subdirectory(lib)
 
-option(PMIDI_NO_INSTALL_PATCHES "Do not install patches" OFF)
+option(PMIDI_INSTALL_PATCHES "Install patches" ON)
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
 	add_subdirectory(src)
@@ -15,7 +15,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND NOT CMAKE_SYSTEM_NAME 
 		DESTINATION ${CMAKE_INSTALL_BINDIR}
 	)
 
-	if(NOT PMIDI_NO_INSTALL_PATCHES)
+	if(PMIDI_INSTALL_PATCHES)
 		file(GLOB PATCHES patches/florestan-*)
 		install(
 			DIRECTORY ${PATCHES}

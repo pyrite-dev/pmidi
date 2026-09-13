@@ -12,7 +12,7 @@ struct buffer {
 	short buffer[BUFSZ * 2];
 };
 
-struct output {
+struct Output {
 	FILE*	  fp;
 	buffer_t* buffers;
 };
@@ -41,8 +41,8 @@ static void write32(FILE* f, unsigned int n) {
 	}
 }
 
-static output_t* New(const char* output) {
-	output_t* self = calloc(1, sizeof(*self));
+static Output* New(const char* output) {
+	Output* self = calloc(1, sizeof(*self));
 
 	if(output == NULL || (self->fp = fopen(output, "wb")) == NULL) {
 		fprintf(stderr, "cannot open output\n");
@@ -54,7 +54,7 @@ static output_t* New(const char* output) {
 	return self;
 }
 
-static void Write(output_t* self, short* wave) {
+static void Write(Output* self, short* wave) {
 	buffer_t buffer;
 
 	memcpy(buffer.buffer, wave, sizeof(buffer.buffer));
@@ -62,11 +62,11 @@ static void Write(output_t* self, short* wave) {
 	arrput(self->buffers, buffer);
 }
 
-static int BufferedSize(output_t* self) {
+static int BufferedSize(Output* self) {
 	return arrlen(self->buffers) * BUFSZ;
 }
 
-static void Destroy(output_t* self) {
+static void Destroy(Output* self) {
 	int samples = arrlen(self->buffers) * BUFSZ;
 	int i;
 
@@ -97,12 +97,13 @@ static void Destroy(output_t* self) {
 	free(self);
 }
 
-static output_mod_t output = {
+static OutputMod output = {
     New,
     Write,
     BufferedSize,
     Destroy,
-    "wave output",
+    "wave",
     'w',
+    "Wave output",
     1};
-output_mod_t* o_wave = &output;
+OutputMod* oWave = &output;

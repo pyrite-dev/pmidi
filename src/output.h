@@ -4,23 +4,27 @@
 #define RATE 48000
 #define BUFSZ (RATE / 100)
 
-typedef struct output output_t;
-struct output;
+typedef struct Output Output;
+struct Output;
 
-typedef struct output_mod output_mod_t;
+typedef struct OutputMod OutputMod;
 
-struct output_mod {
-	output_t* (*New)(const char* output);
-	void (*Write)(output_t* self, short* wave);
-	int (*BufferedSize)(output_t* self);
-	void (*Destroy)(output_t* self);
+struct OutputMod {
+	Output* (*New)(const char* output);
+	void (*Write)(Output* self, short* wave);
+	int (*BufferedSize)(Output* self);
+	void (*Destroy)(Output* self);
 
 	const char* Name;
 	char	    Initial;
+	const char* Description;
 	int	    IsFile;
 };
 
-extern output_mod_t* o_miniaudio;
-extern output_mod_t* o_wave;
+extern OutputMod* oChosen;
+extern Output*	  oHandle;
+
+extern OutputMod* oMiniaudio;
+extern OutputMod* oWave;
 
 #endif

@@ -111,6 +111,7 @@ void EasyMidi_RenderFloat(EasyMidi* self, float* frames, int nFrames) {
 }
 
 void EasyMidi_Reset(EasyMidi* self) {
+	if(self->ms != NULL) MidiStream_Reset(self->ms);
 	WaveSynth_Reset(self->synth);
 }
 

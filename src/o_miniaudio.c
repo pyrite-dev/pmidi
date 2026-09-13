@@ -14,14 +14,14 @@ struct buffer {
 	int   seek;
 };
 
-struct output {
+struct Output {
 	ma_mutex	 mutex;
 	buffer_t*	 buffers;
 	ma_device_config config;
 	ma_device	 device;
 };
 
-static int bufferSize(output_t* self) {
+static int bufferSize(Output* self) {
 	int i;
 	int r = 0;
 
@@ -35,9 +35,9 @@ static int bufferSize(output_t* self) {
 }
 
 static void dataCallback(ma_device* device, void* output, const void* input, ma_uint32 frames) {
-	short*	  out  = output;
-	int	  f    = 0;
-	output_t* self = device->pUserData;
+	short*	out  = output;
+	int	f    = 0;
+	Output* self = device->pUserData;
 
 	memset(out, 0, sizeof(*out) * frames * 2);
 	while(bufferSize(self) > 0 && (frames - f) > 0) {
@@ -55,8 +55,8 @@ static void dataCallback(ma_device* device, void* output, const void* input, ma_
 	}
 }
 
-static output_t* New(const char* output) {
-	output_t* self = calloc(1, sizeof(*self));
+static Output* New(const char* output) {
+	Output* self = calloc(1, sizeof(*self));
 
 	ma_mutex_init(&self->mutex);
 
@@ -85,7 +85,7 @@ static output_t* New(const char* output) {
 	return self;
 }
 
-static void Write(output_t* self, short* wave) {
+static void Write(Output* self, short* wave) {
 	buffer_t buffer;
 
 	memcpy(buffer.buffer, wave, sizeof(buffer.buffer));
@@ -96,23 +96,24 @@ static void Write(output_t* self, short* wave) {
 	ma_mutex_unlock(&self->mutex);
 }
 
-static int BufferedSize(output_t* self) {
+static int BufferedSize(Output* self) {
 	return bufferSize(self);
 }
 
-static void Destroy(output_t* self) {
+static void Destroy(Output* self) {
 	ma_device_uninit(&self->device);
 	arrfree(self->buffers);
 	ma_mutex_uninit(&self->mutex);
 	free(self);
 }
 
-static output_mod_t output = {
+static OutputMod output = {
     New,
     Write,
     BufferedSize,
     Destroy,
     "miniaudio",
     'm',
+    "Generic audio output",
     0};
-output_mod_t* o_miniaudio = &output;
+OutputMod* oMiniaudio = &output;

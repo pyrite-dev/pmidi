@@ -18,7 +18,7 @@ any other library. Note that ABI compatibility is not guaranteed between version
 fix releases, so take care if compiling as a shared object.
 
 miniaudio includes both low level and high level APIs. The low level API is good for those who want
-to do all of their mixing themselves and only require a light weight interface to the underlying
+to do all of their mixing themselves and only require a light weight Interface to the underlying
 audio device. The high level API is good for those who have complex mixing and effect requirements.
 
 In miniaudio, objects are transparent structures. Unlike many other libraries, there are no handles
@@ -774,8 +774,8 @@ The data source abstraction in miniaudio is used for retrieving audio data from 
 examples include `ma_decoder`, `ma_noise` and `ma_waveform`. You will need to be familiar with data
 sources in order to make sense of some of the higher level concepts in miniaudio.
 
-The `ma_data_source` API is a generic interface for reading from a data source. Any object that
-implements the data source interface can be plugged into any `ma_data_source` function.
+The `ma_data_source` API is a generic Interface for reading from a data source. Any object that
+implements the data source Interface can be plugged into any `ma_data_source` function.
 
 To read data from a data source:
 
@@ -8278,7 +8278,7 @@ The example below shows how to initialize the context using custom backend prior
 wants to prioritize ALSA over PulseAudio on Linux. They also want to avoid using the WinMM backend on Windows because it's latency is too high. They also
 want an error to be returned if no valid backend is available which they achieve by excluding the Null backend.
 
-For the configuration, the program wants to capture any log messages so they can, for example, route it to a log file and user interface.
+For the configuration, the program wants to capture any log messages so they can, for example, route it to a log file and user Interface.
 
 ```c
 ma_backend backends[] = {
@@ -22335,7 +22335,7 @@ static void ma_completion_handler_uwp_wait(ma_completion_handler_uwp* pHandler)
 static HRESULT STDMETHODCALLTYPE ma_IMMNotificationClient_QueryInterface(ma_IMMNotificationClient* pThis, const IID* const riid, void** ppObject)
 {
     /*
-    We care about two interfaces - IUnknown and IMMNotificationClient. If the requested IID is something else
+    We care about two Interfaces - IUnknown and IMMNotificationClient. If the requested IID is something else
     we just return E_NOINTERFACE. Otherwise we need to increment the reference counter and return S_OK.
     */
     if (!ma_is_guid_equal(riid, &MA_IID_IUnknown) && !ma_is_guid_equal(riid, &MA_IID_IMMNotificationClient)) {
@@ -23313,10 +23313,10 @@ static ma_result ma_context_get_IAudioClient_UWP__wasapi(ma_context* pContext, m
         return FAILED(hr) ? ma_result_from_HRESULT(hr) : ma_result_from_HRESULT(activateResult);
     }
 
-    /* Here is where we grab the IAudioClient interface. */
+    /* Here is where we grab the IAudioClient Interface. */
     hr = ma_IUnknown_QueryInterface(pActivatedInterface, &MA_IID_IAudioClient, (void**)ppAudioClient);
     if (FAILED(hr)) {
-        ma_log_postf(ma_context_get_log(pContext), MA_LOG_LEVEL_ERROR, "[WASAPI] Failed to query IAudioClient interface.\n");
+        ma_log_postf(ma_context_get_log(pContext), MA_LOG_LEVEL_ERROR, "[WASAPI] Failed to query IAudioClient Interface.\n");
         return ma_result_from_HRESULT(hr);
     }
 
@@ -25167,7 +25167,7 @@ static ma_result ma_context_init__wasapi(ma_context* pContext, const ma_context_
 
     Note this section:
 
-        When releasing an IAudioRenderClient interface instance, the client must call the interface's
+        When releasing an IAudioRenderClient Interface instance, the client must call the Interface's
         Release method from the same thread as the call to IAudioClient::GetService that created the
         object.
     */
@@ -35582,7 +35582,7 @@ static ma_result ma_device__untrack__coreaudio(ma_device* pDevice)
 #endif
 
 #if defined(MA_APPLE_MOBILE)
-@interface ma_ios_notification_handler:NSObject {
+@Interface ma_ios_notification_handler:NSObject {
     ma_device* m_pDevice;
 }
 @end
@@ -40478,7 +40478,7 @@ static ma_result ma_context_enumerate_devices__opensl(ma_context* pContext, ma_e
     SLAudioIODeviceCapabilitiesItf deviceCaps;
     SLresult resultSL = (*g_maEngineObjectSL)->GetInterface(g_maEngineObjectSL, (SLInterfaceID)pContext->opensl.SL_IID_AUDIOIODEVICECAPABILITIES, &deviceCaps);
     if (resultSL != SL_RESULT_SUCCESS) {
-        /* The interface may not be supported so just report a default device. */
+        /* The Interface may not be supported so just report a default device. */
         goto return_default_device;
     }
 
@@ -40619,7 +40619,7 @@ static ma_result ma_context_get_device_info__opensl(ma_context* pContext, ma_dev
     SLAudioIODeviceCapabilitiesItf deviceCaps;
     SLresult resultSL = (*g_maEngineObjectSL)->GetInterface(g_maEngineObjectSL, (SLInterfaceID)pContext->opensl.SL_IID_AUDIOIODEVICECAPABILITIES, &deviceCaps);
     if (resultSL != SL_RESULT_SUCCESS) {
-        /* The interface may not be supported so just report a default device. */
+        /* The Interface may not be supported so just report a default device. */
         goto return_default_device;
     }
 
@@ -41005,14 +41005,14 @@ static ma_result ma_device_init__opensl(ma_device* pDevice, const ma_device_conf
         resultSL = MA_OPENSL_OBJ(pDevice->opensl.pAudioRecorderObj)->GetInterface((SLObjectItf)pDevice->opensl.pAudioRecorderObj, (SLInterfaceID)pDevice->pContext->opensl.SL_IID_RECORD, &pDevice->opensl.pAudioRecorder);
         if (resultSL != SL_RESULT_SUCCESS) {
             ma_device_uninit__opensl(pDevice);
-            ma_log_post(ma_device_get_log(pDevice), MA_LOG_LEVEL_ERROR, "[OpenSL] Failed to retrieve SL_IID_RECORD interface.");
+            ma_log_post(ma_device_get_log(pDevice), MA_LOG_LEVEL_ERROR, "[OpenSL] Failed to retrieve SL_IID_RECORD Interface.");
             return ma_result_from_OpenSL(resultSL);
         }
 
         resultSL = MA_OPENSL_OBJ(pDevice->opensl.pAudioRecorderObj)->GetInterface((SLObjectItf)pDevice->opensl.pAudioRecorderObj, (SLInterfaceID)pDevice->pContext->opensl.SL_IID_ANDROIDSIMPLEBUFFERQUEUE, &pDevice->opensl.pBufferQueueCapture);
         if (resultSL != SL_RESULT_SUCCESS) {
             ma_device_uninit__opensl(pDevice);
-            ma_log_post(ma_device_get_log(pDevice), MA_LOG_LEVEL_ERROR, "[OpenSL] Failed to retrieve SL_IID_ANDROIDSIMPLEBUFFERQUEUE interface.");
+            ma_log_post(ma_device_get_log(pDevice), MA_LOG_LEVEL_ERROR, "[OpenSL] Failed to retrieve SL_IID_ANDROIDSIMPLEBUFFERQUEUE Interface.");
             return ma_result_from_OpenSL(resultSL);
         }
 
@@ -41066,7 +41066,7 @@ static ma_result ma_device_init__opensl(ma_device* pDevice, const ma_device_conf
         resultSL = MA_OPENSL_OBJ(pDevice->opensl.pOutputMixObj)->GetInterface((SLObjectItf)pDevice->opensl.pOutputMixObj, (SLInterfaceID)pDevice->pContext->opensl.SL_IID_OUTPUTMIX, &pDevice->opensl.pOutputMix);
         if (resultSL != SL_RESULT_SUCCESS) {
             ma_device_uninit__opensl(pDevice);
-            ma_log_post(ma_device_get_log(pDevice), MA_LOG_LEVEL_ERROR, "[OpenSL] Failed to retrieve SL_IID_OUTPUTMIX interface.");
+            ma_log_post(ma_device_get_log(pDevice), MA_LOG_LEVEL_ERROR, "[OpenSL] Failed to retrieve SL_IID_OUTPUTMIX Interface.");
             return ma_result_from_OpenSL(resultSL);
         }
 
@@ -41128,14 +41128,14 @@ static ma_result ma_device_init__opensl(ma_device* pDevice, const ma_device_conf
         resultSL = MA_OPENSL_OBJ(pDevice->opensl.pAudioPlayerObj)->GetInterface((SLObjectItf)pDevice->opensl.pAudioPlayerObj, (SLInterfaceID)pDevice->pContext->opensl.SL_IID_PLAY, &pDevice->opensl.pAudioPlayer);
         if (resultSL != SL_RESULT_SUCCESS) {
             ma_device_uninit__opensl(pDevice);
-            ma_log_post(ma_device_get_log(pDevice), MA_LOG_LEVEL_ERROR, "[OpenSL] Failed to retrieve SL_IID_PLAY interface.");
+            ma_log_post(ma_device_get_log(pDevice), MA_LOG_LEVEL_ERROR, "[OpenSL] Failed to retrieve SL_IID_PLAY Interface.");
             return ma_result_from_OpenSL(resultSL);
         }
 
         resultSL = MA_OPENSL_OBJ(pDevice->opensl.pAudioPlayerObj)->GetInterface((SLObjectItf)pDevice->opensl.pAudioPlayerObj, (SLInterfaceID)pDevice->pContext->opensl.SL_IID_ANDROIDSIMPLEBUFFERQUEUE, &pDevice->opensl.pBufferQueuePlayback);
         if (resultSL != SL_RESULT_SUCCESS) {
             ma_device_uninit__opensl(pDevice);
-            ma_log_post(ma_device_get_log(pDevice), MA_LOG_LEVEL_ERROR, "[OpenSL] Failed to retrieve SL_IID_ANDROIDSIMPLEBUFFERQUEUE interface.");
+            ma_log_post(ma_device_get_log(pDevice), MA_LOG_LEVEL_ERROR, "[OpenSL] Failed to retrieve SL_IID_ANDROIDSIMPLEBUFFERQUEUE Interface.");
             return ma_result_from_OpenSL(resultSL);
         }
 

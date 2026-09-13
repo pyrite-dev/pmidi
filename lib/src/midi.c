@@ -98,7 +98,6 @@ MidiStream* MidiStream_New(FileStream* fs, MidiCallback callback) {
 
 	self->nTracks  = read16(self->fs, NULL);
 	self->division = read16(self->fs, NULL);
-	self->tempo    = 500000;
 
 #ifdef DEBUG
 	fprintf(stderr, "format %d, %d tracks, %d divisions\n", self->format, self->nTracks, self->division);
@@ -109,8 +108,6 @@ MidiStream* MidiStream_New(FileStream* fs, MidiCallback callback) {
 	self->tracks = calloc(self->nTracks, sizeof(*self->tracks));
 
 	for(i = 0; i < self->nTracks; i++) {
-		MidiBigUInt nextTrack = 8 + FileStream_Tell(self->fs);
-
 		if(read32(self->fs, NULL) != 0x4d54726b) {
 			MidiStream_Destroy(self);
 
@@ -118,17 +115,16 @@ MidiStream* MidiStream_New(FileStream* fs, MidiCallback callback) {
 		}
 
 		self->tracks[i].dataSize  = read32(self->fs, NULL);
-		self->tracks[i].nextTick  = readDelta(self->fs, NULL);
-		self->tracks[i].fileStart = self->tracks[i].filePos = FileStream_Tell(self->fs);
+		self->tracks[i].fileStart = FileStream_Tell(self->fs);
 
 #ifdef DEBUG
-		fprintf(stderr, "track %d has %d bytes, data starts from %d, first delta is %d\n", i, self->tracks[i].dataSize, (unsigned int)self->tracks[i].fileStart, (unsigned int)self->tracks[i].nextTick);
+		fprintf(stderr, "track %d has %d bytes, data starts from %d\n", i, self->tracks[i].dataSize, (unsigned int)self->tracks[i].fileStart);
 #endif
 
-		nextTrack += self->tracks[i].dataSize;
-
-		FileStream_Seek(self->fs, nextTrack);
+		FileStream_Seek(self->fs, FileStream_Tell(self->fs) + self->tracks[i].dataSize);
 	}
+
+	MidiStream_Reset(self);
 
 	return self;
 }
@@ -314,6 +310,22 @@ void MidiStream_Advance(MidiStream* self, double sec) {
 			self->tracks[i].nextTick += readDelta(self->fs, NULL);
 			self->tracks[i].filePos = FileStream_Tell(self->fs);
 		}
+	}
+}
+
+void MidiStream_Reset(MidiStream* self) {
+	int i;
+
+	self->tempo	  = 500000;
+	self->currentSec  = 0;
+	self->currentTick = 0;
+
+	for(i = 0; i < self->nTracks; i++) {
+		FileStream_Seek(self->fs, self->tracks[i].fileStart);
+
+		self->tracks[i].nextTick = readDelta(self->fs, NULL);
+		self->tracks[i].filePos	 = FileStream_Tell(self->fs);
+		self->tracks[i].finished = 0;
 	}
 }
 

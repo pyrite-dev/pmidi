@@ -105,6 +105,7 @@ struct MidiStream {
 MidiStream* MidiStream_New(FileStream* fs, MidiCallback callback);
 void	    MidiStream_Parse(FileStream* fs, unsigned char** buf, MidiTrack* track, MidiEvent* ev); /* you MUST pass fs or buf, track may be NULL */
 void	    MidiStream_Advance(MidiStream* self, double sec);
+void	    MidiStream_Reset(MidiStream* self);
 void	    MidiStream_Destroy(MidiStream* self);
 
 #endif

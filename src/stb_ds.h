@@ -68,7 +68,7 @@ DOCUMENTATION
 
   Dynamic Arrays
 
-    Non-function interface:
+    Non-function Interface:
 
       Declare an empty dynamic array of type T
         T* foo = NULL;
@@ -152,7 +152,7 @@ DOCUMENTATION
     functions do not require TV value and can have other fields. For string
     hash maps, TK must be 'char *'.
 
-    Special interface:
+    Special Interface:
 
       stbds_rand_seed:
         void stbds_rand_seed(size_t seed);
@@ -171,7 +171,7 @@ DOCUMENTATION
           specification-compliant SipHash-2-4 on all data by defining
           STBDS_SIPHASH_2_4, at a significant cost in speed.
 
-    Non-function interface:
+    Non-function Interface:
 
       Declare an empty hash map of type T
         T* foo = NULL;
@@ -179,7 +179,7 @@ DOCUMENTATION
       Access the i'th entry in a hash table T* foo:
         foo[i]
 
-    Function interface (actually macros):
+    Function Interface (actually macros):
 
       hmfree
       shfree
@@ -273,7 +273,7 @@ DOCUMENTATION
           If 'key' is in the hashmap, deletes its entry and returns 1.
           Otherwise returns 0.
 
-    Function interface (actually macros) for strings only:
+    Function Interface (actually macros) for strings only:
 
       sh_new_strdup
         void sh_new_strdup(T*);
