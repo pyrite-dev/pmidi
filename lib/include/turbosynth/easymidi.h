@@ -11,6 +11,8 @@
 
 typedef struct EasyMidi EasyMidi;
 
+typedef void (*EasyMidiCallback)(EasyMidi* self, const MidiEvent* event);
+
 struct EasyMidi {
 	int rate;
 
@@ -18,6 +20,10 @@ struct EasyMidi {
 	FileStream* fs;
 
 	WaveSynth* synth;
+
+	void* user;
+
+	EasyMidiCallback callback;
 };
 
 #ifdef __cplusplus
@@ -27,6 +33,7 @@ extern "C" {
 EasyMidi*  EasyMidi_New(const char* cfg, int rate);
 EasyMidi*  EasyMidi_New2(FileStream* cfg, int rate);
 WaveSynth* EasyMidi_GetSynth(EasyMidi* self);
+void	   EasyMidi_SetCallback(EasyMidi* self, EasyMidiCallback callback);
 void	   EasyMidi_MidiCallback(MidiStream* ms, const MidiEvent* event);
 void	   EasyMidi_MidiHandler(WaveSynth* ws, const MidiEvent* event); /* you may use this as GM/GM2 handler */
 int	   EasyMidi_Load(EasyMidi* self, const char* midi);

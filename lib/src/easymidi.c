@@ -31,8 +31,16 @@ WaveSynth* EasyMidi_GetSynth(EasyMidi* self) {
 	return self->synth;
 }
 
+void EasyMidi_SetCallback(EasyMidi* self, EasyMidiCallback callback) {
+	self->callback = callback;
+}
+
 void EasyMidi_MidiCallback(MidiStream* ms, const MidiEvent* event) {
-	EasyMidi_MidiHandler(ms->user, event);
+	EasyMidi* self = ms->user;
+
+	EasyMidi_MidiHandler(self->synth, event);
+
+	if(self->callback != NULL) self->callback(self, event);
 }
 
 void EasyMidi_MidiHandler(WaveSynth* ws, const MidiEvent* event) {
@@ -84,7 +92,7 @@ int EasyMidi_Load2(EasyMidi* self, FileStream* midi) {
 
 	if((self->ms = MidiStream_New(self->fs, EasyMidi_MidiCallback)) == NULL) return 0;
 
-	self->ms->user = self->synth;
+	self->ms->user = self;
 
 	return 1;
 }
