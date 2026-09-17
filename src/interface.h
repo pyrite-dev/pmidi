@@ -28,6 +28,8 @@ extern Mutex* mAudio;
 extern EasyMidi*  gEasyMidi;
 extern WaveSynth* gSynth;
 extern int	  gPlayed;
+extern int	  gLoop;
+extern int	  gPaused;
 
 extern InterfaceMod* iChosen;
 extern Interface*    iHandle;

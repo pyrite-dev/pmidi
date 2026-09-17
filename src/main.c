@@ -23,6 +23,7 @@ WaveSynth* gSynth;
 
 int gPlayed = 0;
 int gLoop   = 0;
+int gPaused = 0;
 
 InterfaceMod* iModules[128];
 InterfaceMod* iChosen = NULL;
@@ -37,18 +38,22 @@ repeat:;
 	while(!gPlayed) {
 		short buffer[BUFSZ * 2];
 
-		Mutex_Lock(mAudio);
-		if(EasyMidi_IsFinished(gEasyMidi)) {
-			if(gLoop) {
-				EasyMidi_Reset(gEasyMidi);
-				nSamples = 0;
-			} else {
-				Mutex_Unlock(mAudio);
-				break;
+		memset(buffer, 0, sizeof(buffer));
+
+		if(!gPaused) {
+			Mutex_Lock(mAudio);
+			if(EasyMidi_IsFinished(gEasyMidi)) {
+				if(gLoop) {
+					EasyMidi_Reset(gEasyMidi);
+					nSamples = 0;
+				} else if(!iChosen->Continue) {
+					Mutex_Unlock(mAudio);
+					break;
+				}
 			}
+			EasyMidi_RenderShort(gEasyMidi, buffer, BUFSZ);
+			Mutex_Unlock(mAudio);
 		}
-		EasyMidi_RenderShort(gEasyMidi, buffer, BUFSZ);
-		Mutex_Unlock(mAudio);
 
 		oChosen->Write(oHandle, buffer);
 
@@ -135,13 +140,24 @@ int main(int argc, char** argv) {
 					}
 				}
 			}
+		} else if(startcmp(argv[i], "-i")) {
+			char* arg = argv[i][2] == 0 ? argv[++i] : (argv[i] + 2);
+
+			if(arg != NULL) {
+				for(j = 1; j < sizeof(iModules) / sizeof(iModules[0]); j++) {
+					if(strcmp(iModules[j]->Name, arg) == 0 || (strlen(arg) == 1 && iModules[j]->Initial == arg[0])) {
+						iChosen = iModules[j];
+						break;
+					}
+				}
+			}
 		} else if(strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
 			printf("Usage: %s [flags] midi\n", argv[0]);
 			printf("\n");
 			printf("Flags:\n");
 			printf("    %s specify config\n", padEnd("-C [config]", PAD));
 			printf("    %s set output, also automatically toggles to wave output\n", padEnd("-o [output]", PAD));
-			printf("    %s set output module, available:\n", padEnd(" -O [output]", PAD));
+			printf("    %s set output module, available:\n", padEnd("-O [output]", PAD));
 			for(j = 0; j < sizeof(oModules) / sizeof(oModules[0]); j++) {
 				if(oModules[j] == NULL) continue;
 				printf("    %s    `%s' or `%c': %s\n", padEnd("", PAD), oModules[j]->Name, oModules[j]->Initial, oModules[j]->Description);

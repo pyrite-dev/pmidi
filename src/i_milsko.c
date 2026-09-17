@@ -10,7 +10,8 @@
 #define WhiteKeys 75
 #define KeyWidth 6
 #define PianoHeight 18
-#define ControlHeight 64
+#define ControlHeight 90
+#define ControlButtonHeight 25
 
 static const int whiteBefore[12] = {
     0, 1, 1, 2, 2, 3,
@@ -134,66 +135,268 @@ MwClassRec MwPianoClassRec = {
 MwClass MwPianoClass = &MwPianoClassRec;
 
 struct Interface {
-	MwWidget   window;
-	MwWidget   piano[16];
-	MwWidget   box[16];
+	MwWidget window;
+	MwWidget menu;
+	MwWidget piano[16];
+	MwWidget box[16];
+	MwWidget prgbnk[16];
+	MwWidget lcd0;
+
 	MwLLPixmap icon;
+
+	int update_piano[16];
+
+	int program[16];
+	int bank[16];
+	int update_prgbnk[16];
 };
 
 static void window_tick(MwWidget handle, void* user, void* call) {
-	Interface* self = MwGetVoid(handle, "Vself");
+	Interface* self = user;
 	int	   i;
 
 	for(i = 0; i < 16; i++) {
-		MwForceRender(self->piano[i]);
+		if(self->update_prgbnk[i]) {
+			char buf[8];
+
+			sprintf(buf, "%3d %3d", self->program[i] + 1, self->bank[i]);
+
+			MwVaApply(self->prgbnk[i],
+				  MwNtext, buf,
+				  NULL);
+
+			self->update_prgbnk[i] = 0;
+		}
+
+		if(self->update_piano[i]) {
+			MwForceRender(self->piano[i]);
+			self->update_piano[i] = 0;
+		}
 	}
 }
+
+static void reset(Interface* self) {
+	int i;
+
+	gPaused = 0;
+	Mutex_Lock(mAudio);
+	EasyMidi_Reset(gEasyMidi);
+
+	for(i = 0; i < 16; i++) {
+		memset(self->program, 0, sizeof(self->program));
+		memset(self->bank, 0, sizeof(self->bank));
+		self->update_prgbnk[i] = 1;
+		memset(self->piano[i]->internal, 0, sizeof(int) * 128);
+		self->update_piano[i] = 1;
+	}
+	Mutex_Unlock(mAudio);
+}
+
+static void button_activate(MwWidget handle, void* user, void* call) {
+	Interface* self = user;
+
+	if(strcmp(handle->name, "pause") == 0) {
+		gPaused = !gPaused;
+	} else if(strcmp(handle->name, "stop") == 0) {
+		reset(self);
+	} else if(strcmp(handle->name, "play") == 0) {
+		int do_reset = 0;
+
+		Mutex_Lock(mAudio);
+		if(!gLoop && EasyMidi_IsFinished(gEasyMidi)) do_reset = 1;
+		Mutex_Unlock(mAudio);
+
+		if(do_reset) reset(self);
+
+		gPaused = 0;
+	}
+}
+
+static void button_draw(MwWidget handle) {
+	MwLLColor color = MwParseColor(handle, MwGetText(handle, MwNforeground));
+	int	  aw	= MwGetInteger(handle, MwNwidth);
+	int	  ah	= MwGetInteger(handle, MwNheight);
+	int	  w	= aw < ah ? aw : ah;
+	int	  bw	= MwDefaultBorderWidth(handle);
+	int	  l	= w - bw * 4;
+
+	if(strcmp(handle->name, "stop") == 0) {
+		MwRect r;
+
+		r.width	 = l;
+		r.height = l;
+		r.x	 = (aw - r.width) / 2;
+		r.y	 = (ah - r.height) / 2;
+
+		MwDrawRect(handle, &r, color);
+	} else if(strcmp(handle->name, "pause") == 0) {
+		MwRect r;
+
+		r.width	 = l / 3;
+		r.height = l;
+		r.x	 = (aw - r.width * 3) / 2;
+		r.y	 = (ah - r.height) / 2;
+
+		MwDrawRect(handle, &r, color);
+
+		r.x += r.width * 2;
+		MwDrawRect(handle, &r, color);
+	} else if(strcmp(handle->name, "play") == 0) {
+		MwPoint p[3];
+
+		p[0].x = (aw - l) / 2;
+		p[0].y = (ah - l) / 2;
+		p[1].x = (aw - l) / 2;
+		p[1].y = (ah - l) / 2 + l;
+		p[2].x = (aw - l) / 2 + l;
+		p[2].y = ah / 2;
+
+		MwLLPolygon(handle->lowlevel, p, 3, color);
+	}
+
+	MwLLFreeColor(color);
+}
+
+#define LABELPROPS MwNuseMonospace, 1, \
+		   MwNalignment, MwALIGNMENT_BEGINNING
 
 static Interface* New(void) {
 	Interface*  self = calloc(1, sizeof(*self));
 	MwSizeHints sh;
 	int	    i;
 	int	    PianoWidth;
+	MwWidget    cbox, cbox2, cbox3, cbox4, cbox5;
+	MwWidget    btn;
+	int	    y;
+
+	for(i = 0; i < 16; i++) {
+		self->update_prgbnk[i] = 1;
+	}
 
 	PianoWidth = WhiteKeys * KeyWidth;
 
 	sh.max_width = sh.min_width = PianoWidth * 4 / 3;
-	sh.max_height = sh.min_height = PianoHeight * 16 + ControlHeight;
+	sh.max_height = sh.min_height = PianoHeight * 17 + ControlHeight;
 
 	MwLibraryInit();
 
 	if((self->window = MwVaCreateWidget(MwWindowClass, "window", NULL, MwDEFAULT, MwDEFAULT, sh.max_width, sh.max_height,
 					    MwNtitle, "Pyrite MIDI Player",
-					    MwNsizeHints, &sh,
-					    "Vself", self,
 					    NULL)) == NULL) {
 		free(self);
 
 		return NULL;
 	}
 
-	self->icon = MwLoadXPM(self->window, pmidi);
+	self->menu = MwCreateWidget(MwMenuClass, "menu", self->window, 0, 0, 0, 0);
+	MwMenuAdd(self->menu, NULL, "File");
+
+	sh.min_height += MwGetInteger(self->menu, MwNheight);
+	sh.max_height += MwGetInteger(self->menu, MwNheight);
+
+	MwVaApply(self->window,
+		  MwNwidth, sh.max_width,
+		  MwNheight, sh.max_height,
+		  MwNsizeHints, &sh,
+		  NULL);
+
+	self->icon = MwLoadXPM(self->window, pmidi_xpm);
 
 	MwSetVoid(self->window, MwNiconPixmap, self->icon);
 
-	for(i = 0; i < 16; i++) {
+	y = MwGetInteger(self->menu, MwNheight);
+
+	for(i = 0; i < 17; i++, y += PianoHeight) {
 		char t[16];
+		int  l3sz = MwTextWidth(self->window, MwFLBuildFont(MwFLFlagMonospace), "CH#");
+		int  spsz = MwTextWidth(self->window, MwFLBuildFont(MwFLFlagMonospace), ".");
 
-		sprintf(t, "CH%02d", i + 1);
+		if(i == 0) {
+			MwWidget bl = MwVaCreateWidget(MwBoxClass, "box", self->window, 0, y, sh.max_width, PianoHeight,
+						       MwNhasBorder, 1,
+						       MwNinverted, 1,
+						       NULL);
 
-		self->piano[i] = MwCreateWidget(MwPianoClass, "piano", self->window, sh.max_width - PianoWidth, i * PianoHeight, PianoWidth, PianoHeight);
-		self->box[i]   = MwVaCreateWidget(MwBoxClass, "box", self->window, 0, i * PianoHeight, sh.max_width - PianoWidth, PianoHeight,
-						  MwNhasBorder, 1,
-						  MwNinverted, 1,
-						  NULL);
+			MwVaCreateWidget(MwLabelClass, "label", bl, 0, 0, 0, 0,
+					 MwNtext, "CH#",
+					 LABELPROPS,
+					 MwNfixedSize, l3sz,
+					 NULL);
 
-		MwVaCreateWidget(MwLabelClass, "label", self->box[i], 0, 0, 0, 0,
+			MwVaCreateWidget(MwLabelClass, "label", bl, 0, 0, 0, 0,
+					 MwNtext, " PRG BNK",
+					 LABELPROPS,
+					 MwNfixedSize, spsz + l3sz + spsz + l3sz,
+					 NULL);
+
+			continue;
+		}
+
+		sprintf(t, "%3d", i);
+
+		self->piano[i - 1] = MwCreateWidget(MwPianoClass, "piano", self->window, sh.max_width - PianoWidth, y, PianoWidth, PianoHeight);
+		self->box[i - 1]   = MwVaCreateWidget(MwBoxClass, "box", self->window, 0, y, sh.max_width - PianoWidth, PianoHeight,
+						      MwNhasBorder, 1,
+						      MwNinverted, 1,
+						      NULL);
+
+		MwVaCreateWidget(MwLabelClass, "label", self->box[i - 1], 0, 0, 0, 0,
 				 MwNtext, t,
-				 MwNuseMonospace, 1,
-				 MwNalignment, MwALIGNMENT_BEGINNING,
-				 MwNfixedSize, MwTextWidth(self->box[i], MwFLBuildFont(MwFLFlagMonospace), t),
+				 LABELPROPS,
+				 MwNfixedSize, l3sz,
 				 NULL);
+
+		MwVaCreateWidget(MwLabelClass, "label", self->box[i - 1], 0, 0, 0, 0,
+				 LABELPROPS,
+				 MwNfixedSize, spsz,
+				 NULL);
+
+		self->prgbnk[i - 1] = MwVaCreateWidget(MwLabelClass, "label", self->box[i - 1], 0, 0, 0, 0,
+						       LABELPROPS,
+						       MwNfixedSize, l3sz + spsz + l3sz,
+						       NULL);
 	}
+
+	cbox = MwCreateWidget(MwBoxClass, "controlbox", self->window, 0, y, sh.max_width, ControlHeight);
+
+	cbox2 = MwVaCreateWidget(MwBoxClass, "controlbox2", cbox, 0, 0, 0, 0,
+				 MwNfixedSize, sh.max_width - PianoWidth,
+				 MwNhasBorder, 1,
+				 MwNinverted, 1,
+				 NULL);
+
+	cbox3 = MwVaCreateWidget(MwBoxClass, "controlbox3", cbox, 0, 0, 0, 0,
+				 MwNorientation, MwVERTICAL,
+				 NULL);
+
+	cbox4 = MwVaCreateWidget(MwBoxClass, "controlbox4", cbox3, 0, 0, 0, 0,
+				 MwNhasBorder, 1,
+				 MwNinverted, 1,
+				 NULL);
+
+	cbox5 = MwVaCreateWidget(MwBoxClass, "controlbox5", cbox3, 0, 0, 0, 0,
+				 MwNfixedSize, ControlButtonHeight,
+				 MwNhasBorder, 1,
+				 MwNinverted, 1,
+				 NULL);
+
+	btn = MwVaCreateWidget(MwButtonClass, "stop", cbox5, 0, 0, 0, 0,
+			       MwNfixedSize, ControlButtonHeight,
+			       NULL);
+	MwAddUserHandler(btn, MwNactivateHandler, button_activate, self);
+	btn->draw_inject = button_draw;
+
+	btn = MwVaCreateWidget(MwButtonClass, "pause", cbox5, 0, 0, 0, 0,
+			       MwNfixedSize, ControlButtonHeight,
+			       NULL);
+	MwAddUserHandler(btn, MwNactivateHandler, button_activate, self);
+	btn->draw_inject = button_draw;
+
+	btn = MwVaCreateWidget(MwButtonClass, "play", cbox5, 0, 0, 0, 0,
+			       MwNfixedSize, ControlButtonHeight,
+			       NULL);
+	MwAddUserHandler(btn, MwNactivateHandler, button_activate, self);
+	btn->draw_inject = button_draw;
 
 	while(MwPending(self->window)) MwStep(self->window);
 
@@ -207,7 +410,14 @@ static void midi_callback(EasyMidi* self, const MidiEvent* event) {
 	if(event->type == MidiEventNote) {
 		int* arr = iface->piano[event->note.channel]->internal;
 
-		arr[event->note.key] = event->note.velocity;
+		arr[event->note.key]			 = event->note.velocity;
+		iface->update_piano[event->note.channel] = 1;
+	} else if(event->type == MidiEventProgramChange) {
+		WaveSynth* synth = EasyMidi_GetSynth(self);
+
+		iface->program[event->programChange.channel]	   = synth->channels[event->programChange.channel].program;
+		iface->bank[event->programChange.channel]	   = synth->channels[event->programChange.channel].bank;
+		iface->update_prgbnk[event->programChange.channel] = 1;
 	}
 }
 

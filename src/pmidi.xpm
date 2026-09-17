@@ -1,5 +1,5 @@
 /* XPM */
-static char *pmidi[] = {
+static char* pmidi_xpm[] = {
 /* columns rows colors chars-per-pixel */
 "32 32 21 1 ",
 "  c None",

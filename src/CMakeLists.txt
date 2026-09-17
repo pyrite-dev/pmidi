@@ -1,5 +1,9 @@
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+	set(MODE WIN32)
+endif()
+	
 file(GLOB PMIDI_SOURCES *.c)
-add_executable(pmidi ${PMIDI_SOURCES})
+add_executable(pmidi ${MODE} ${PMIDI_SOURCES})
 target_include_directories(pmidi PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(pmidi PRIVATE turbosynth)
 
