@@ -98,22 +98,25 @@ static unsigned int keyFrequency(int note) {
 	return freqTable[note];
 }
 
-WaveSynth* WaveSynth_New(FileStream* fs, int rate) {
-	WaveSynth* self = calloc(1, sizeof(*self));
-	char	   line[LINESZ + 1];
-	char	   c[2];
-	int	   comment = 0;
-	int	   num	   = -1; /* -1 to ignore numbers */
-	char*	   dir	   = malloc(strlen(fs->path) + 1);
-	char*	   dirr;
+static WaveSynth* read_config(WaveSynth* self, FileStream* fs, char* dir, int rate) {
+	char  line[LINESZ + 1];
+	char  c[2];
+	int   comment = 0;
+	int   num     = -1; /* -1 to ignore numbers */
+	char* og_dir  = dir;
+	char* dirr;
 
-	strcpy(dir, fs->path);
-	if((dirr = strrchr(dir, '/')) != NULL || (dirr = strrchr(dir, '\\')) != NULL) {
-		for(; dirr > dir && (*dirr == '/' || *dirr == '\\'); dirr--) *dirr = 0;
-	}
+	if(dir == NULL) {
+		dir = malloc(strlen(fs->path) + 1);
 
-	if(dirr == NULL || strlen(dir) == 0) {
-		strcpy(dir, "./");
+		strcpy(dir, fs->path);
+		if((dirr = strrchr(dir, '/')) != NULL || (dirr = strrchr(dir, '\\')) != NULL) {
+			for(; dirr > dir && (*dirr == '/' || *dirr == '\\'); dirr--) *dirr = 0;
+		}
+
+		if(dirr == NULL || strlen(dir) == 0) {
+			strcpy(dir, "./");
+		}
 	}
 
 	self->rate = rate;
@@ -209,6 +212,20 @@ WaveSynth* WaveSynth_New(FileStream* fs, int rate) {
 						free(dir);
 						dir = malloc(strlen(arg1) + 1);
 						strcpy(dir, arg1);
+					} else if(strcmp(arg0, "source") == 0) {
+						char*	    name1 = malloc(strlen(dir) + 1 + strlen(arg1) + 1);
+						FileStream* fs2;
+
+						strcpy(name1, dir);
+						strcat(name1, "/");
+						strcat(name1, arg1);
+
+						if((fs2 = fs->New(arg1, fs->newArg)) != NULL || (fs2 = fs->New(name1, fs->newArg)) != NULL) {
+							read_config(self, fs2, dir, rate);
+							FileStream_Destroy(fs2);
+						}
+
+						free(name1);
 					}
 				}
 			}
@@ -230,11 +247,16 @@ WaveSynth* WaveSynth_New(FileStream* fs, int rate) {
 		}
 	}
 
-	WaveSynth_Reset(self);
-
-	free(dir);
+	if(og_dir == NULL) WaveSynth_Reset(self);
+	if(og_dir == NULL) free(dir);
 
 	return self;
+}
+
+WaveSynth* WaveSynth_New(FileStream* fs, int rate) {
+	WaveSynth* self = calloc(1, sizeof(*self));
+
+	return read_config(self, fs, NULL, rate);
 }
 
 static void loadSample(WSSample* sample, FileStream* fs, int patchChannels, int rate) {
