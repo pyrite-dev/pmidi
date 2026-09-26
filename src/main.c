@@ -112,11 +112,15 @@ int main(int argc, char** argv) {
 
 	n = 0;
 #ifdef _WIN32
+#ifdef HAS_MW
 	iModules[n++] = iMilsko;
+#endif
 #endif
 	iModules[n++] = iDumb;
 #ifndef _WIN32
+#ifdef HAS_MW
 	iModules[n++] = iMilsko;
+#endif
 #endif
 
 	n	      = 0;

@@ -1,3 +1,4 @@
+#ifdef HAS_MW
 #include "interface.h"
 
 #include "output.h"
@@ -446,3 +447,4 @@ static InterfaceMod _interface = {
     1,
     1};
 InterfaceMod* iMilsko = &_interface;
+#endif
