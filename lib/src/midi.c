@@ -190,7 +190,7 @@ void MidiStream_Parse(FileStream* fs, unsigned char** buf, MidiTrack* track, Mid
 
 		ev->type		      = MidiEventPitchWheelChange;
 		ev->pitchWheelChange.channel  = op & 0xf;
-		ev->pitchWheelChange.bend     = ((bendm << 7) | bendm) - 8192;
+		ev->pitchWheelChange.bend     = ((bendm << 7) | bendl) - 8192;
 		ev->pitchWheelChange.semitone = (double)ev->pitchWheelChange.bend / 8192 * 2;
 		break;
 	}
