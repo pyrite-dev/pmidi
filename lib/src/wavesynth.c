@@ -510,13 +510,13 @@ static void loadSample(WSSample* sample, FileStream* fs, int patchChannels, int 
 #ifdef MONAURAL
 		sample->wave[i] = (fl + fr) / 2 * 32767;
 
-		if(fabs(sample->wave[i]) > absmax) absmax = fabs(sample->wave[i]);
+		if(abs(sample->wave[i]) > absmax) absmax = abs(sample->wave[i]);
 #else
 		sample->wave[i * 2 + 0] = fl * 32767;
 		sample->wave[i * 2 + 1] = fr * 32767;
 
-		if(fabs(sample->wave[i * 2 + 0]) > absmax) absmax = fabs(sample->wave[i * 2 + 0]);
-		if(fabs(sample->wave[i * 2 + 1]) > absmax) absmax = fabs(sample->wave[i * 2 + 1]);
+		if(abs(sample->wave[i * 2 + 0]) > absmax) absmax = abs(sample->wave[i * 2 + 0]);
+		if(abs(sample->wave[i * 2 + 1]) > absmax) absmax = abs(sample->wave[i * 2 + 1]);
 #endif
 	}
 
