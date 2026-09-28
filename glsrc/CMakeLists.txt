@@ -1,7 +1,7 @@
 find_package(OpenGL)
 
 include(FindPkgConfig)
-pkg_search_module(SDL2 REQUIRED sdl2)
+pkg_search_module(SDL2 sdl2)
 
 if(SDL2_FOUND AND OPENGL_FOUND)
 	file(GLOB PMIDIGL_SOURCES *.c)

@@ -60,6 +60,53 @@ static const int freqTable[128] = {
     8372018, 8869844, 9397273, 9956063,
     10548082, 11175303, 11839822, 12543854};
 
+static const int vol_table[128] = {
+    0x400, 0x422, 0x445, 0x469, /**/
+    0x48f, 0x4b6, 0x4de, 0x507, /**/
+    0x532, 0x55e, 0x58c, 0x5bc, /**/
+
+    0x5ec, 0x61f, 0x653, 0x689, /**/
+    0x6c1, 0x6fa, 0x736, 0x773, /**/
+    0x7b3, 0x7f4, 0x838, 0x87e, /**/
+
+    0x8c7, 0x911, 0x95f, 0x9af, /**/
+    0xa01, 0xa56, 0xaae, 0xb0a, /**/
+    0xb68, 0xbc9, 0xc2d, 0xc95, /**/
+
+    0xd00, 0xd6f, 0xde2, 0xe58,	    /**/
+    0xed2, 0xf51, 0xfd3, 0x105a,    /**/
+    0x10e5, 0x1175, 0x120a, 0x12a4, /**/
+
+    0x1343, 0x13e7, 0x1490, 0x1540, /**/
+    0x15f5, 0x16b0, 0x1771, 0x1839, /**/
+    0x1908, 0x19dd, 0x1ab9, 0x1b9d, /**/
+
+    0x1c88, 0x1d7c, 0x1e77, 0x1f7a, /**/
+    0x2087, 0x219c, 0x22ba, 0x23e2, /**/
+    0x2514, 0x2650, 0x2797, 0x28e8, /**/
+
+    0x2a45, 0x2bad, 0x2d21, 0x2ea2, /**/
+    0x302f, 0x31ca, 0x3372, 0x3529, /**/
+    0x36ee, 0x38c2, 0x3aa5, 0x3c99, /**/
+
+    0x3e9e, 0x40b3, 0x42db, 0x4514, /**/
+    0x4761, 0x49c2, 0x4c36, 0x4ec0, /**/
+    0x515f, 0x5414, 0x56e1, 0x59c5, /**/
+
+    0x5cc2, 0x5fd9, 0x6309, 0x6655, /**/
+    0x69be, 0x6d43, 0x70e6, 0x74a8, /**/
+    0x788a, 0x7c8d, 0x80b3, 0x84fc, /**/
+
+    0x8969, 0x8dfc, 0x92b6, 0x9798, /**/
+    0x9ca4, 0xa1db, 0xa73e, 0xacd0, /**/
+    0xb290, 0xb882, 0xbea7, 0xc4ff, /**/
+
+    0xcb8e, 0xd255, 0xd955, 0xe092,  /**/
+    0xe80b, 0xefc5, 0xf7c0, 0x10000, /**/
+};
+
+static WSProgramSet* getProgramSet(WaveSynth* self, int bank);
+
 static __inline unsigned int read8(FileStream* fs) {
 	unsigned char n;
 
@@ -98,7 +145,7 @@ static unsigned int keyFrequency(int note) {
 	return freqTable[note];
 }
 
-static WaveSynth* read_config(WaveSynth* self, FileStream* fs, char* dir, int rate) {
+static WaveSynth* readConfig(WaveSynth* self, FileStream* fs, char* dir, int rate) {
 	char  line[LINESZ + 1];
 	char  c[2];
 	int   comment = 0;
@@ -134,12 +181,58 @@ static WaveSynth* read_config(WaveSynth* self, FileStream* fs, char* dir, int ra
 		if((n = FileStream_Read(fs, c, 1)) == 0 || c[0] == '\n') {
 			char* arg0 = line;
 			char* arg1 = line;
+			char* arg;
+			int   amp = -1;
 
 			while(*arg1 != 0 && *arg1 != ' ' && *arg1 != '\t') arg1++;
+
 			if(*arg1) {
 				*arg1++ = 0;
 
 				while(*arg1 != 0 && (*arg1 == ' ' || *arg1 == '\t')) arg1++;
+
+				arg = arg1;
+				while(*arg != 0 && *arg != ' ' && *arg != '\t') arg++;
+
+				if(*arg) {
+					char* last;
+
+					*arg++ = 0;
+					while(*arg != 0 && (*arg == ' ' || *arg == '\t')) arg++;
+
+					last = arg;
+					while(1) {
+						if(*arg == ' ' || *arg == '\t' || *arg == 0) {
+							int   end = *arg == 0;
+							char* eq;
+
+							if(!end) {
+								*arg++ = 0;
+							}
+
+							if((eq = strchr(last, '=')) != NULL) {
+								char* key   = last;
+								char* value = eq + 1;
+
+								*eq = 0;
+
+								if(strcmp(key, "amp") == 0) {
+									amp = atoi(value);
+								}
+							}
+
+							if(!end) {
+								while(*arg != 0 && (*arg == ' ' || *arg == '\t')) arg++;
+
+								last = arg;
+							}
+
+							if(end) break;
+						}
+
+						arg++;
+					}
+				}
 
 				if(*arg1) {
 					if(*arg1 == '"' || *arg1 == '\'') arg1++;
@@ -169,6 +262,10 @@ static WaveSynth* read_config(WaveSynth* self, FileStream* fs, char* dir, int ra
 							}
 
 							if((patch = fs->New(arg1, fs->newArg)) != NULL || (patch = fs->New(patchpath, fs->newArg)) != NULL || (patch = fs->New(patchpath2, fs->newArg)) != NULL || (patch = fs->New(patchpath3, fs->newArg)) != NULL) {
+								WSProgramSet* set;
+								WSProgram*    prg;
+								int	      i;
+
 								if(!WaveSynth_Load(self, num & 0xff, program, num & (1 << 8), patch)) {
 									FileStream_Destroy(patch);
 									free(patchpath3);
@@ -179,6 +276,13 @@ static WaveSynth* read_config(WaveSynth* self, FileStream* fs, char* dir, int ra
 									free(dir);
 
 									return NULL;
+								}
+
+								set = getProgramSet(self, num & 0xff);
+								prg = &(*set)[program | ((num & (1 << 8)) ? 0x80 : 0)];
+
+								if(amp != -1) {
+									for(i = 0; i < prg->nSamples; i++) prg->samples[i].amp = amp / 100.0;
 								}
 
 								FileStream_Destroy(patch);
@@ -223,7 +327,7 @@ static WaveSynth* read_config(WaveSynth* self, FileStream* fs, char* dir, int ra
 							char* d = malloc(strlen(dir) + 1);
 							strcpy(d, dir);
 
-							read_config(self, fs2, d, rate);
+							readConfig(self, fs2, d, rate);
 							FileStream_Destroy(fs2);
 						}
 
@@ -258,7 +362,7 @@ static WaveSynth* read_config(WaveSynth* self, FileStream* fs, char* dir, int ra
 WaveSynth* WaveSynth_New(FileStream* fs, int rate) {
 	WaveSynth* self = calloc(1, sizeof(*self));
 
-	return read_config(self, fs, NULL, rate);
+	return readConfig(self, fs, NULL, rate);
 }
 
 static void loadSample(WSSample* sample, FileStream* fs, int patchChannels, int rate) {
@@ -274,6 +378,7 @@ static void loadSample(WSSample* sample, FileStream* fs, int patchChannels, int 
 	unsigned short* u16;
 	unsigned char	envRate[6];
 	unsigned char	envOffset[6];
+	float		absmax = 0;
 
 	FileStream_Seek(fs, FileStream_Tell(fs) + 7); /* wave name */
 	read8(fs);				      /* fractions */
@@ -404,11 +509,18 @@ static void loadSample(WSSample* sample, FileStream* fs, int patchChannels, int 
 
 #ifdef MONAURAL
 		sample->wave[i] = (fl + fr) / 2 * 32767;
+
+		if(fabs(sample->wave[i]) > absmax) absmax = fabs(sample->wave[i]);
 #else
 		sample->wave[i * 2 + 0] = fl * 32767;
 		sample->wave[i * 2 + 1] = fr * 32767;
+
+		if(fabs(sample->wave[i * 2 + 0]) > absmax) absmax = fabs(sample->wave[i * 2 + 0]);
+		if(fabs(sample->wave[i * 2 + 1]) > absmax) absmax = fabs(sample->wave[i * 2 + 1]);
 #endif
 	}
+
+	sample->amp = 32767 / absmax;
 
 	free(wave);
 }
@@ -547,6 +659,7 @@ void WaveSynth_Note(WaveSynth* self, int channel, int key, int velocity) {
 			int	      bank = self->channels[channel].bank;
 			WSProgramSet* ps;
 			WSProgram*    prog;
+			float	      vol = (float)velocity / 127 / 2 * 65536;
 
 		retry:;
 			ps   = getProgramSet(self, bank);
@@ -561,7 +674,6 @@ void WaveSynth_Note(WaveSynth* self, int channel, int key, int velocity) {
 			voice->sample	= NULL;
 			voice->x	= 0;
 			voice->step	= 0;
-			voice->volume	= (float)velocity / 127 / 4 * 65536;
 			voice->envIndex = 0;
 			voice->released = 0;
 
@@ -574,7 +686,9 @@ void WaveSynth_Note(WaveSynth* self, int channel, int key, int velocity) {
 					if(drum || (sample->lowFrequency <= (freq + TOL) && freq <= (sample->highFrequency + TOL))) {
 						voice->sample	     = sample;
 						voice->baseStep	     = (unsigned int)((double)(drum ? sample->rootFrequency : freq) / sample->rootFrequency * sample->ratio * 65536);
+						voice->volume	     = vol * sample->amp;
 						voice->loop	     = sample->loop && !sample->loopBi && !sample->loopBackward;
+						sample->envEnable    = 0;
 						voice->currentVolume = sample->envEnable ? sample->envOffset[0] : 0x10000;
 
 						voice->step = voice->baseStep * self->channels[channel].pitchRatio;
@@ -674,7 +788,7 @@ void WaveSynth_SetVolumeMSB(WaveSynth* self, int channel, int volume) {
 	if(channel < 0 && WAVESYNTH_CHANNELS <= channel) return;
 
 	self->channels[channel].volume &= 0x3f80;
-	self->channels[channel].volume &= (volume & 0x7f) << 7;
+	self->channels[channel].volume |= (volume & 0x7f) << 7;
 }
 
 void WaveSynth_SetVolumeLSB(WaveSynth* self, int channel, int volume) {
@@ -751,8 +865,8 @@ void WaveSynth_RenderShort(WaveSynth* self, short* output, int frames) {
 	int* mix = calloc(frames * 2, sizeof(*mix));
 
 	RENDER({
-		mix[k * 2 + 0] += ((((((int)wave[CH1] * voice->volume) >> 16) * voice->currentVolume) >> 16) * channel->volume) >> 14;
-		mix[k * 2 + 1] += ((((((int)wave[CH2] * voice->volume) >> 16) * voice->currentVolume) >> 16) * channel->volume) >> 14;
+		mix[k * 2 + 0] += ((((((int)wave[CH1] * voice->volume) >> 16) * vol_table[(voice->currentVolume * 127) >> 16]) >> 16) * channel->volume) >> 14;
+		mix[k * 2 + 1] += ((((((int)wave[CH2] * voice->volume) >> 16) * vol_table[(voice->currentVolume * 127) >> 16]) >> 16) * channel->volume) >> 14;
 	});
 
 	for(i = 0; i < frames * 2; i++) {
@@ -771,8 +885,8 @@ void WaveSynth_RenderFloat(WaveSynth* self, float* output, int frames) {
 	memset(output, 0, frames * 2 * sizeof(*output));
 
 	RENDER({
-		output[k * 2 + 0] += (float)wave[CH1] / 32767 * (voice->volume / 65536.0) * (voice->currentVolume / 65536.0) * (channel->volume / 16384.0);
-		output[k * 2 + 1] += (float)wave[CH2] / 32767 * (voice->volume / 65536.0) * (voice->currentVolume / 65536.0) * (channel->volume / 16384.0);
+		output[k * 2 + 0] += (float)wave[CH1] / 32767 * (voice->volume / 65536.0) * (vol_table[(voice->currentVolume * 127) >> 16] / 65536.0) * (channel->volume / 16384.0);
+		output[k * 2 + 1] += (float)wave[CH2] / 32767 * (voice->volume / 65536.0) * (vol_table[(voice->currentVolume * 127) >> 16] / 65536.0) * (channel->volume / 16384.0);
 	});
 
 	for(i = 0; i < frames * 2; i++) {

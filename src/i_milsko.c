@@ -43,16 +43,16 @@ static void piano_destroy(MwWidget handle) {
 }
 
 static void piano_draw(MwWidget handle) {
-	MwLLColor base	= MwParseColor(handle, MwGetText(handle, MwNbackground));
-	MwLLColor white = MwParseColor(handle, "#ffffff");
-	MwLLColor black = MwParseColor(handle, "#000000");
-	MwLLColor red	= MwParseColor(handle, "#ff0000");
-	MwRect	  r;
-	double	  getX[128];
-	double	  getWidth[128];
-	int	  i, j;
-	int	  WhiteHeight, BlackHeight;
-	int*	  arr = handle->internal;
+	MwColor base  = MwParseColor(handle, MwGetString(handle, MwNbackground));
+	MwColor white = MwParseColor(handle, "#ffffff");
+	MwColor black = MwParseColor(handle, "#000000");
+	MwColor red   = MwParseColor(handle, "#ff0000");
+	MwRect	r;
+	double	getX[128];
+	double	getWidth[128];
+	int	i, j;
+	int	WhiteHeight, BlackHeight;
+	int*	arr = handle->internal;
 
 	r.x	 = 0;
 	r.y	 = 0;
@@ -106,10 +106,10 @@ static void piano_draw(MwWidget handle) {
 
 	MwDrawRectLine(handle, &r, black);
 
-	MwLLFreeColor(red);
-	MwLLFreeColor(black);
-	MwLLFreeColor(white);
-	MwLLFreeColor(base);
+	MwFreeColor(red);
+	MwFreeColor(black);
+	MwFreeColor(white);
+	MwFreeColor(base);
 }
 
 MwClassRec MwPianoClassRec = {
@@ -143,7 +143,7 @@ struct Interface {
 	MwWidget prgbnk[16];
 	MwWidget lcd0;
 
-	MwLLPixmap icon;
+	MwPixmap icon;
 
 	int update_piano[16];
 
@@ -214,12 +214,12 @@ static void button_activate(MwWidget handle, void* user, void* call) {
 }
 
 static void button_draw(MwWidget handle) {
-	MwLLColor color = MwParseColor(handle, MwGetText(handle, MwNforeground));
-	int	  aw	= MwGetInteger(handle, MwNwidth);
-	int	  ah	= MwGetInteger(handle, MwNheight);
-	int	  w	= aw < ah ? aw : ah;
-	int	  bw	= MwDefaultBorderWidth(handle);
-	int	  l	= w - bw * 4;
+	MwColor color = MwParseColor(handle, MwGetString(handle, MwNforeground));
+	int	aw    = MwGetInteger(handle, MwNwidth);
+	int	ah    = MwGetInteger(handle, MwNheight);
+	int	w     = aw < ah ? aw : ah;
+	int	bw    = MwDefaultBorderWidth(handle);
+	int	l     = w - bw * 4;
 
 	if(strcmp(handle->name, "stop") == 0) {
 		MwRect r;
@@ -252,10 +252,10 @@ static void button_draw(MwWidget handle) {
 		p[2].x = (aw - l) / 2 + l;
 		p[2].y = ah / 2;
 
-		MwLLPolygon(handle->lowlevel, p, 3, color);
+		MwPolygon(handle, p, 3, color);
 	}
 
-	MwLLFreeColor(color);
+	MwFreeColor(color);
 }
 
 #define LABELPROPS MwNuseMonospace, 1, \
@@ -303,7 +303,7 @@ static Interface* New(void) {
 
 	self->icon = MwLoadXPM(self->window, pmidi_xpm);
 
-	MwSetVoid(self->window, MwNiconPixmap, self->icon);
+	MwSetPointer(self->window, MwNiconPixmap, self->icon);
 
 	y = MwGetInteger(self->menu, MwNheight);
 
@@ -432,7 +432,7 @@ static void Run(Interface* self) {
 }
 
 static void Destroy(Interface* self) {
-	MwLLDestroyPixmap(self->icon);
+	MwDestroyPixmap(self->icon);
 	MwDestroyWidget(self->window);
 	free(self);
 }

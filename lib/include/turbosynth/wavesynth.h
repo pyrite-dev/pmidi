@@ -34,6 +34,8 @@ struct WSSample {
 	int loopBi;	  /* 0 = uni, 1 = bi */
 	int loopBackward; /* 0 = forward, 1 = backward */
 
+	float amp;
+
 	unsigned int envIncrement[6];
 	unsigned int envOffset[6];
 	int	     envEnable;
@@ -54,8 +56,8 @@ struct WSVoice {
 	int key;
 
 	WSSample* sample;
-	int	  volume;	 /* 16.16 */
-	int	  currentVolume; /* 16.16 */
+	int	  volume; /* 16.16 */
+	int	  currentVolume;
 	int	  loop;
 
 	unsigned int x;	       /* 16.16 */
@@ -82,7 +84,7 @@ struct WSChannel {
 };
 
 struct WSBank {
-	int	      indices[128 * 128];
+	int	      indices[128];
 	WSProgramSet* sets;
 	int	      nSets;
 };
