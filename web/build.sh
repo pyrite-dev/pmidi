@@ -4,4 +4,5 @@ if [ -d ../buildwasm ]; then
 elif [ -d ../build ]; then
 	( cd ../build && make -j4 && cp lib/turbosynthwasm.js ../web/ )
 fi
-( cd ../patches && zip -rv ../web/florestan.zip florestan*)
+( cd ../patches/florestan && zip -rv ../../web/florestan.zip *)
+( cd ../patches/eawpats && zip -rv ../../web/eawpats.zip *)

@@ -16,13 +16,13 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND NOT CMAKE_SYSTEM_NAME 
 	)
 
 	if(PMIDI_INSTALL_PATCHES)
-		file(GLOB PATCHES patches/florestan-*)
+		file(GLOB PATCHES patches/eawpats)
 		install(
 			DIRECTORY ${PATCHES}
 			DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/pmidi
 		)
 		install(
-			FILES patches/florestan.cfg
+			FILES patches/eawpats/eawpats.cfg
 			RENAME pmidi.cfg
 			DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/pmidi
 		)
