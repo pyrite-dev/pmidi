@@ -14,6 +14,8 @@
 #define ControlHeight 90
 #define ControlButtonHeight 25
 
+static void* m_file_open;
+
 static const int whiteBefore[12] = {
     0, 1, 1, 2, 2, 3,
     4, 4, 5, 5, 6, 6};
@@ -261,6 +263,20 @@ static void button_draw(MwWidget handle) {
 #define LABELPROPS MwNuseMonospace, 1, \
 		   MwNalignment, MwALIGNMENT_BEGINNING
 
+static void fc_filechosen(MwWidget handle, void* user, void* call) {
+	reset(user);
+	EasyMidi_Reset(gEasyMidi);
+	EasyMidi_Load(gEasyMidi, call);
+}
+
+static void menu_menu(MwWidget handle, void* user, void* call) {
+	if(call == m_file_open){
+		MwWidget fc = MwFileChooser(MwGetParent(handle), "Choose MIDI file to open");
+
+		MwAddUserHandler(fc, MwNfileChosenHandler, fc_filechosen, user);
+	}
+}
+
 static Interface* New(void) {
 	Interface*  self = calloc(1, sizeof(*self));
 	MwSizeHints sh;
@@ -269,6 +285,7 @@ static Interface* New(void) {
 	MwWidget    cbox, cbox2, cbox3, cbox4, cbox5;
 	MwWidget    btn;
 	int	    y;
+	void* m;
 
 	for(i = 0; i < 16; i++) {
 		self->update_prgbnk[i] = 1;
@@ -290,7 +307,10 @@ static Interface* New(void) {
 	}
 
 	self->menu = MwCreateWidget(MwMenuClass, "menu", self->window, 0, 0, 0, 0);
-	MwMenuAdd(self->menu, NULL, "File");
+	m = MwMenuAdd(self->menu, NULL, "File");
+	m_file_open = MwMenuAdd(self->menu, m, "Open");
+
+	MwAddUserHandler(self->menu, MwNmenuHandler, menu_menu, self);
 
 	sh.min_height += MwGetInteger(self->menu, MwNheight);
 	sh.max_height += MwGetInteger(self->menu, MwNheight);
