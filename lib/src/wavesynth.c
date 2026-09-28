@@ -103,7 +103,6 @@ static WaveSynth* read_config(WaveSynth* self, FileStream* fs, char* dir, int ra
 	char  c[2];
 	int   comment = 0;
 	int   num     = -1; /* -1 to ignore numbers */
-	char* og_dir  = dir;
 	char* dirr;
 
 	if(dir == NULL) {
@@ -221,7 +220,10 @@ static WaveSynth* read_config(WaveSynth* self, FileStream* fs, char* dir, int ra
 						strcat(name1, arg1);
 
 						if((fs2 = fs->New(arg1, fs->newArg)) != NULL || (fs2 = fs->New(name1, fs->newArg)) != NULL) {
-							read_config(self, fs2, dir, rate);
+							char* d = malloc(strlen(dir) + 1);
+							strcpy(d, dir);
+
+							read_config(self, fs2, d, rate);
 							FileStream_Destroy(fs2);
 						}
 
@@ -247,8 +249,8 @@ static WaveSynth* read_config(WaveSynth* self, FileStream* fs, char* dir, int ra
 		}
 	}
 
-	if(og_dir == NULL) WaveSynth_Reset(self);
-	if(og_dir == NULL) free(dir);
+	WaveSynth_Reset(self);
+	free(dir);
 
 	return self;
 }

@@ -15,7 +15,7 @@ typedef struct WSChannel WSChannel;
 typedef struct WSBank	 WSBank;
 typedef struct WaveSynth WaveSynth;
 
-#define WAVESYNTH_VOICES 128
+#define WAVESYNTH_VOICES 32
 #define WAVESYNTH_CHANNELS 128
 
 struct WSSample {
