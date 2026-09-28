@@ -57,7 +57,7 @@ struct WSVoice {
 
 	WSSample* sample;
 	int	  volume; /* 16.16 */
-	int	  currentVolume;
+	int	  currentVolume; /* 16.16 */
 	int	  loop;
 
 	unsigned int x;	       /* 16.16 */
