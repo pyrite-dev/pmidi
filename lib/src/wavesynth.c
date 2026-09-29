@@ -183,6 +183,7 @@ static WaveSynth* readConfig(WaveSynth* self, FileStream* fs, char* dir, int rat
 			char* arg1 = line;
 			char* arg;
 			int   amp = -1;
+			int note = -1;
 
 			while(*arg1 != 0 && *arg1 != ' ' && *arg1 != '\t') arg1++;
 
@@ -218,6 +219,8 @@ static WaveSynth* readConfig(WaveSynth* self, FileStream* fs, char* dir, int rat
 
 								if(strcmp(key, "amp") == 0) {
 									amp = atoi(value);
+								}else if(strcmp(key, "note") == 0) {
+									note = atoi(value);
 								}
 							}
 
@@ -280,9 +283,9 @@ static WaveSynth* readConfig(WaveSynth* self, FileStream* fs, char* dir, int rat
 
 								set = getProgramSet(self, num & 0xff);
 								prg = &(*set)[program | ((num & (1 << 8)) ? 0x80 : 0)];
-
-								if(amp != -1) {
-									for(i = 0; i < prg->nSamples; i++) prg->samples[i].amp = amp / 100.0;
+								for(i = 0; i < prg->nSamples; i++){
+									if(amp != -1) prg->samples[i].amp = amp / 100.0;
+									if(note != -1) prg->samples[i].rootFrequency = keyFrequency(note);
 								}
 
 								FileStream_Destroy(patch);
