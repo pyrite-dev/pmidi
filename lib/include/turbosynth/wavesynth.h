@@ -89,7 +89,7 @@ struct WSChannel {
 };
 
 struct WSBank {
-	int	      indices[128];
+	int	      indices[128 * 128];
 	WSProgramSet* sets;
 	int	      nSets;
 };

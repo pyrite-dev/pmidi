@@ -861,6 +861,7 @@ void WaveSynth_SetVolumeLSB(WaveSynth* self, int channel, int volume) {
 				} \
 \
 				/* TODO: implement more than forward/bi loop */ \
+				x = voice->x >> 16; \
 				if(voice->loopFwd && x >= sample->endLoop) { \
 					voice->x = (sample->startLoop + (x - sample->endLoop)) << 16; \
 				} else if(voice->loopBi && voice->biState == 0 && x >= sample->endLoop) { \
@@ -878,7 +879,7 @@ void WaveSynth_SetVolumeLSB(WaveSynth* self, int channel, int volume) {
 				if(!voice->used) break; \
 \
 				x = voice->x >> 16; \
-				if(x > (sample->nWaveFrames - 1)) voice->x = (sample->nWaveFrames - 1) << 16; \
+				if(x >= sample->nWaveFrames) voice->x = (sample->nWaveFrames - 1) << 16; \
 			} \
 		} \
 	}
