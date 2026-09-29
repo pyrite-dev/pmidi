@@ -864,9 +864,11 @@ void WaveSynth_SetVolumeLSB(WaveSynth* self, int channel, int volume) {
 				if(voice->loopFwd && x >= sample->endLoop) { \
 					voice->x = (sample->startLoop + (x - sample->endLoop)) << 16; \
 				} else if(voice->loopBi && voice->biState == 0 && x >= sample->endLoop) { \
-					voice->x = (sample->endLoop - CHANNELS) << 16; \
+					voice->x       = (sample->endLoop - CHANNELS) << 16; \
+					voice->biState = 1; \
 				} else if(voice->loopBi && voice->biState == 1 && x <= sample->startLoop) { \
-					voice->x = (sample->startLoop) << 16; \
+					voice->x       = (sample->startLoop) << 16; \
+					voice->biState = 0; \
 				} else if(!sample->loop && x >= sample->nWaveFrames) { \
 					voice->used = 0; \
 				} \
