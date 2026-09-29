@@ -182,8 +182,8 @@ static WaveSynth* readConfig(WaveSynth* self, FileStream* fs, char* dir, int rat
 			char* arg0 = line;
 			char* arg1 = line;
 			char* arg;
-			int   amp = -1;
-			int note = -1;
+			int   amp  = -1;
+			int   note = -1;
 
 			while(*arg1 != 0 && *arg1 != ' ' && *arg1 != '\t') arg1++;
 
@@ -219,7 +219,7 @@ static WaveSynth* readConfig(WaveSynth* self, FileStream* fs, char* dir, int rat
 
 								if(strcmp(key, "amp") == 0) {
 									amp = atoi(value);
-								}else if(strcmp(key, "note") == 0) {
+								} else if(strcmp(key, "note") == 0) {
 									note = atoi(value);
 								}
 							}
@@ -283,10 +283,12 @@ static WaveSynth* readConfig(WaveSynth* self, FileStream* fs, char* dir, int rat
 
 								set = getProgramSet(self, num & 0xff);
 								prg = &(*set)[program | ((num & (1 << 8)) ? 0x80 : 0)];
-								for(i = 0; i < prg->nSamples; i++){
+								for(i = 0; i < prg->nSamples; i++) {
 									if(amp != -1) prg->samples[i].amp = amp / 100.0;
-									if(note != -1) prg->samples[i].rootFrequency = keyFrequency(note);
+									if(note > 0) prg->samples[i].baseFrequency = keyFrequency(note);
 								}
+
+								prg->note = note;
 
 								FileStream_Destroy(patch);
 								free(patchpath3);
@@ -391,7 +393,7 @@ static void loadSample(WSSample* sample, FileStream* fs, int patchChannels, int 
 	sampleRate	      = read16(fs);
 	sample->lowFrequency  = read32(fs);
 	sample->highFrequency = read32(fs);
-	sample->rootFrequency = read32(fs);
+	sample->rootFrequency = sample->baseFrequency = read32(fs);
 	read16(fs); /* tune */
 	balance = ((float)read8(fs) - 128) / 128;
 	FileStream_Read(fs, envRate, 6);
@@ -677,20 +679,25 @@ void WaveSynth_Note(WaveSynth* self, int channel, int key, int velocity) {
 			voice->sample	= NULL;
 			voice->x	= 0;
 			voice->step	= 0;
+			voice->biState	= 0;
 			voice->envIndex = 0;
 			voice->released = 0;
 
 			if(prog->used) {
-				int freq = keyFrequency(key);
+				int freq;
+
+				if(prog->note > 0) key = prog->note;
+				freq = keyFrequency(key);
 
 				for(i = 0; i < prog->nSamples; i++) {
 					WSSample* sample = &prog->samples[i];
 
 					if(drum || (sample->lowFrequency <= (freq + TOL) && freq <= (sample->highFrequency + TOL))) {
 						voice->sample	     = sample;
-						voice->baseStep	     = (unsigned int)((double)(drum ? sample->rootFrequency : freq) / sample->rootFrequency * sample->ratio * 65536);
+						voice->baseStep	     = (unsigned int)((double)(drum ? sample->baseFrequency : freq) / sample->rootFrequency * sample->ratio * 65536);
 						voice->volume	     = vol * sample->amp;
-						voice->loop	     = sample->loop && !sample->loopBi && !sample->loopBackward;
+						voice->loopFwd	     = sample->loop && !sample->loopBi && !sample->loopBackward;
+						voice->loopBi	     = sample->loop && sample->loopBi && !sample->loopBackward;
 						sample->envEnable    = 0;
 						voice->currentVolume = sample->envEnable ? sample->envOffset[0] : 0x10000;
 
@@ -847,11 +854,19 @@ void WaveSynth_SetVolumeLSB(WaveSynth* self, int channel, int volume) {
 \
 				proc; \
 \
-				voice->x += voice->step; \
+				if(voice->loopBi && voice->biState == 1) { \
+					voice->x -= voice->step; \
+				} else { \
+					voice->x += voice->step; \
+				} \
 \
-				/* TODO: implement more than forward loop */ \
-				if(voice->loop && x >= sample->endLoop) { \
+				/* TODO: implement more than forward/bi loop */ \
+				if(voice->loopFwd && x >= sample->endLoop) { \
 					voice->x = (sample->startLoop + (x - sample->endLoop)) << 16; \
+				} else if(voice->loopBi && voice->biState == 0 && x >= sample->endLoop) { \
+					voice->x = (sample->endLoop - CHANNELS) << 16; \
+				} else if(voice->loopBi && voice->biState == 1 && x <= sample->startLoop) { \
+					voice->x = (sample->startLoop) << 16; \
 				} else if(!sample->loop && x >= sample->nWaveFrames) { \
 					voice->used = 0; \
 				} \

@@ -22,6 +22,7 @@ struct WSSample {
 	unsigned int lowFrequency;
 	unsigned int highFrequency;
 	unsigned int rootFrequency;
+	unsigned int baseFrequency;
 
 	unsigned int startLoop;
 	unsigned int endLoop;
@@ -44,6 +45,7 @@ struct WSSample {
 
 struct WSProgram {
 	int masterVolume;
+	int note;
 
 	WSSample* samples;
 	int	  nSamples;
@@ -56,9 +58,12 @@ struct WSVoice {
 	int key;
 
 	WSSample* sample;
-	int	  volume; /* 16.16 */
+	int	  volume;	 /* 16.16 */
 	int	  currentVolume; /* 16.16 */
-	int	  loop;
+
+	int loopFwd;
+	int loopBi;
+	int biState;
 
 	unsigned int x;	       /* 16.16 */
 	unsigned int step;     /* 16.16 */

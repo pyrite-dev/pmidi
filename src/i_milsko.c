@@ -270,7 +270,7 @@ static void fc_filechosen(MwWidget handle, void* user, void* call) {
 }
 
 static void menu_menu(MwWidget handle, void* user, void* call) {
-	if(call == m_file_open){
+	if(call == m_file_open) {
 		MwWidget fc = MwFileChooser(MwGetParent(handle), "Choose MIDI file to open");
 
 		MwAddUserHandler(fc, MwNfileChosenHandler, fc_filechosen, user);
@@ -285,7 +285,7 @@ static Interface* New(void) {
 	MwWidget    cbox, cbox2, cbox3, cbox4, cbox5;
 	MwWidget    btn;
 	int	    y;
-	void* m;
+	void*	    m;
 
 	for(i = 0; i < 16; i++) {
 		self->update_prgbnk[i] = 1;
@@ -306,8 +306,8 @@ static Interface* New(void) {
 		return NULL;
 	}
 
-	self->menu = MwCreateWidget(MwMenuClass, "menu", self->window, 0, 0, 0, 0);
-	m = MwMenuAdd(self->menu, NULL, "File");
+	self->menu  = MwCreateWidget(MwMenuClass, "menu", self->window, 0, 0, 0, 0);
+	m	    = MwMenuAdd(self->menu, NULL, "File");
 	m_file_open = MwMenuAdd(self->menu, m, "Open");
 
 	MwAddUserHandler(self->menu, MwNmenuHandler, menu_menu, self);
