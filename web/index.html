@@ -75,43 +75,69 @@ async function load(){
 	WaveSynth_SetProgram = TurboSynth.cwrap("WaveSynth_SetProgram", null, ["number", "number", "number", "number"]);
 	WaveSynth_Reset = TurboSynth.cwrap("WaveSynth_Reset", null, ["number"]);
 
-	const zip = await JSZip.loadAsync(await (await fetch(document.getElementById("soundfont").value)).arrayBuffer());
-
-	for(let i of Object.keys(zip.files)){
-		if(zip.files[i].dir){
-			TurboSynth.FS.mkdir(i);
-		}else{
-			TurboSynth.FS.writeFile(i, await zip.files[i].async("arraybuffer"));
+	async function loaded(url){
+		const zip = await JSZip.loadAsync(await (await fetch(url)).arrayBuffer());
+	
+		for(let i of Object.keys(zip.files)){
+			if(zip.files[i].dir){
+				TurboSynth.FS.mkdir(i);
+			}else{
+				TurboSynth.FS.writeFile(i, await zip.files[i].async("arraybuffer"));
+			}
+			console.log("loaded " + i);
 		}
-		console.log("loaded " + i);
-	}
-
-	if(!defaultMidi) defaultMidi = await (await fetch("shanghai.mid")).arrayBuffer();
-
-	TurboSynth.FS.writeFile("input.mid", defaultMidi);
-
-	if((EasyMidi = EasyMidi_New(Object.keys(zip.files).find(x=>x.endsWith(".cfg")), 44100)) == 0) return;	
-	console.log("synthesizer loaded");
-
-	WaveSynth = EasyMidi_GetSynth(EasyMidi);
-
-	if(started){
-		start();
-	}
-
-	for(let i = 0; i < 256; i++){
-		midiBuffers[i] = {
-			event: TurboSynth._malloc(512),
-			data: TurboSynth._malloc(512),
-			pData: TurboSynth._malloc(4)
+	
+		if(!defaultMidi) defaultMidi = await (await fetch("shanghai.mid")).arrayBuffer();
+	
+		TurboSynth.FS.writeFile("input.mid", defaultMidi);
+	
+		if((EasyMidi = EasyMidi_New(Object.keys(zip.files).find(x=>x.endsWith(".cfg")), 44100)) == 0) return;	
+		console.log("synthesizer loaded");
+	
+		WaveSynth = EasyMidi_GetSynth(EasyMidi);
+	
+		if(started){
+			start();
 		}
+	
+		for(let i = 0; i < 256; i++){
+			midiBuffers[i] = {
+				event: TurboSynth._malloc(512),
+				data: TurboSynth._malloc(512),
+				pData: TurboSynth._malloc(4)
+			}
+		}
+	
+		document.getElementById("webmidi").disabled = false;
+		document.getElementById("play").disabled = false;
 	}
 
-	document.getElementById("webmidi").disabled = false;
-	document.getElementById("play").disabled = false;
+	const url = document.getElementById("patches").value;
+
+	if(url == "!custom"){
+		if(document.getElementById("custom-patches").value){
+			const reader = new FileReader();
+
+			reader.onload = async function() {
+				await loaded(reader.result);
+			};
+
+			reader.readAsDataURL(document.getElementById("custom-patches").files[0]);
+		}
+	}else{
+		await loaded(url);
+	}
 };
 
-window.onload = load;
+window.onload = ()=>{
+	if(document.getElementById("custom-patches").value){
+		document.getElementById("patches").value = "!custom";
+	}
+
+	console.log("OK");
+
+	load();
+};
 
 function start(){
 	const vol = document.getElementById("volume");
@@ -217,10 +243,11 @@ setInterval(()=>{
 			<input type="button" value="Clear" onclick="document.getElementById('file').value = ''">
 		</p>
 		<p>
-			Soundfont:
-			<select id="soundfont" onchange="load()">
+			Patches:
+			<select id="patches" onchange="load()">
 				<option value="florestan.zip">Florestan</option>
 				<option value="eawpats.zip">EAWpats</option>
+				<option value="!custom">Custom</option>
 				<optgroup label="Not included in the repository but may be usable">
 					<option value="sc55.zip">SC55</option>
 					<option value="ct2mgm.zip">CT2MGM</option>
@@ -229,6 +256,10 @@ setInterval(()=>{
 					<option value="mt6235.zip">MT6235</option>
 				</optgroup>
 			</select>
+		</p>
+		<p>
+			Custom Patches: <input type="file" id="custom-patches" accept=".zip" onchange="window.onload()">
+			<input type="button" value="Clear" onclick="document.getElementById('custom-patches').value = ''; window.onload()">
 		</p>
 		<p>
 			<input type="checkbox" name="loop" id="loop">

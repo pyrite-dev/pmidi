@@ -55,6 +55,8 @@ void EasyMidi_MidiHandler(WaveSynth* ws, const MidiEvent* event) {
 			WaveSynth_SetVolumeMSB(ws, event->control.channel, event->control.value);
 		} else if(event->control.key == MidiControlChannelVolumeLSB) {
 			WaveSynth_SetVolumeLSB(ws, event->control.channel, event->control.value);
+		} else if(event->control.key == MidiControlAllNotesOff){
+			WaveSynth_NoteOffAll(ws, event->control.channel);
 		}
 	} else if(event->type == MidiEventProgramChange) {
 		int drum = 0;
