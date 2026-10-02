@@ -1,6 +1,6 @@
-#include <turbosynth/midi.h>
-#include <turbosynth/wavesynth.h>
-#include <turbosynth/easymidi.h>
+#include <TurboSynth/MIDI.h>
+#include <TurboSynth/WaveSynth.h>
+#include <TurboSynth/EasyMIDI.h>
 
 #include <SDL.h>
 #include <SDL_opengl.h>

@@ -1,4 +1,4 @@
-#include <turbosynth/wavesynth.h>
+#include <TurboSynth/WaveSynth.h>
 
 #define LINESZ 1024
 #define TOL 0

@@ -1,4 +1,4 @@
-#include <turbosynth/easymidi.h>
+#include <TurboSynth/EasyMIDI.h>
 
 #include <config.h>
 

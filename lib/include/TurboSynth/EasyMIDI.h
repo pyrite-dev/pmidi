@@ -1,9 +1,9 @@
 #ifndef __TURBOSYNTH_EASYMIDI_H__
 #define __TURBOSYNTH_EASYMIDI_H__
 
-#include <turbosynth/fs.h>
-#include <turbosynth/midi.h>
-#include <turbosynth/wavesynth.h>
+#include <TurboSynth/FS.h>
+#include <TurboSynth/MIDI.h>
+#include <TurboSynth/WaveSynth.h>
 
 #include <stdlib.h>
 #include <string.h>

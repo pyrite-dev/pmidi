@@ -1,8 +1,8 @@
 #ifndef __INTERFACE_H__
 #define __INTERFACE_H__
 
-#include <turbosynth/easymidi.h>
-#include <turbosynth/wavesynth.h>
+#include <TurboSynth/EasyMIDI.h>
+#include <TurboSynth/WaveSynth.h>
 #include "thread.h"
 
 typedef struct Interface Interface;

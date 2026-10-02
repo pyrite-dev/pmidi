@@ -1,7 +1,7 @@
 #ifndef __TURBOSYNTH_WAVESYNTH_H__
 #define __TURBOSYNTH_WAVESYNTH_H__
 
-#include <turbosynth/fs.h>
+#include <TurboSynth/FS.h>
 
 #include <stdlib.h>
 #include <string.h>

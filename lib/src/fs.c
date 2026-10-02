@@ -1,4 +1,4 @@
-#include <turbosynth/fs.h>
+#include <TurboSynth/FS.h>
 
 // #define LOAD_ALL
 

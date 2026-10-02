@@ -1,4 +1,4 @@
-#include <turbosynth/easymidi.h>
+#include <TurboSynth/EasyMIDI.h>
 
 EasyMidi* EasyMidi_New(const char* cfg, int rate) {
 	FileStream* fs;

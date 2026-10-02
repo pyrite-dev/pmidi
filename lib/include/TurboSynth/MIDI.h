@@ -1,7 +1,7 @@
 #ifndef __TURBOSYNTH_MIDI_H__
 #define __TURBOSYNTH_MIDI_H__
 
-#include <turbosynth/fs.h>
+#include <TurboSynth/FS.h>
 
 #include <stdlib.h>
 #include <string.h>
