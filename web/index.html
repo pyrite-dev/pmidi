@@ -134,8 +134,6 @@ window.onload = ()=>{
 		document.getElementById("patches").value = "!custom";
 	}
 
-	console.log("OK");
-
 	load();
 };
 
@@ -259,7 +257,7 @@ setInterval(()=>{
 		</p>
 		<p>
 			Custom Patches: <input type="file" id="custom-patches" accept=".zip" onchange="window.onload()">
-			<input type="button" value="Clear" onclick="document.getElementById('custom-patches').value = ''; window.onload()">
+			<input type="button" value="Clear" onclick="document.getElementById('custom-patches').value = '';">
 		</p>
 		<p>
 			<input type="checkbox" name="loop" id="loop">
